@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Eye, UserPlus, ClipboardList } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Eye, UserPlus, ClipboardList, Star, ThumbsUp, ThumbsDown, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { RepairOrder, OrderStatus, RepairType, UrgencyLevel, ORDER_STATUSES, REPAIR_TYPES, URGENCY_LEVELS, URGENCY_WEIGHT } from '@/types';
+import { RepairOrder, OrderStatus, RepairType, UrgencyLevel, ORDER_STATUSES, REPAIR_TYPES, URGENCY_LEVELS, URGENCY_WEIGHT, ComplaintTodo } from '@/types';
 import { formatDateTime, getUrgencyColor, getStatusColor, sortOrders } from '@/utils';
 import { cn } from '@/lib/utils';
 import AssignWorkerModal from '@/components/AssignWorkerModal';
@@ -10,15 +10,25 @@ import Empty from '@/components/Empty';
 
 type SortKey = 'urgency' | 'createdAt' | null;
 type SortDirection = 'asc' | 'desc';
+type SatisfactionFilter = '' | 'rated' | 'unrated' | 'good' | 'bad';
 
 const PAGE_SIZE = 8;
 
+const SATISFACTION_FILTER_OPTIONS: { value: SatisfactionFilter; label: string }[] = [
+  { value: '', label: '全部评价' },
+  { value: 'rated', label: '已评价' },
+  { value: 'unrated', label: '未评价' },
+  { value: 'good', label: '好评（4-5星）' },
+  { value: 'bad', label: '差评（1-3星）' },
+];
+
 export default function OrderList() {
-  const { orders } = useAppStore();
+  const { orders, complaintTodos } = useAppStore();
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
   const [typeFilter, setTypeFilter] = useState<RepairType | ''>('');
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyLevel | ''>('');
+  const [satisfactionFilter, setSatisfactionFilter] = useState<SatisfactionFilter>('');
   const [roomSearch, setRoomSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('urgency');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -27,6 +37,10 @@ export default function OrderList() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<RepairOrder | null>(null);
+
+  const getOrderComplaint = (orderId: string): ComplaintTodo | undefined => {
+    return complaintTodos.find((c) => c.orderId === orderId);
+  };
 
   const filteredOrders = useMemo(() => {
     let result = [...orders];
@@ -39,6 +53,22 @@ export default function OrderList() {
     }
     if (urgencyFilter) {
       result = result.filter((o) => o.urgency === urgencyFilter);
+    }
+    if (satisfactionFilter) {
+      switch (satisfactionFilter) {
+        case 'rated':
+          result = result.filter((o) => o.satisfactionRating !== undefined);
+          break;
+        case 'unrated':
+          result = result.filter((o) => o.satisfactionRating === undefined);
+          break;
+        case 'good':
+          result = result.filter((o) => o.satisfactionRating !== undefined && o.satisfactionRating >= 4);
+          break;
+        case 'bad':
+          result = result.filter((o) => o.satisfactionRating !== undefined && o.satisfactionRating <= 3);
+          break;
+      }
     }
     if (roomSearch.trim()) {
       const keyword = roomSearch.trim().toLowerCase();
@@ -60,7 +90,7 @@ export default function OrderList() {
     }
 
     return result;
-  }, [orders, statusFilter, typeFilter, urgencyFilter, roomSearch, sortKey, sortDirection]);
+  }, [orders, statusFilter, typeFilter, urgencyFilter, satisfactionFilter, roomSearch, sortKey, sortDirection]);
 
   const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
   const paginatedOrders = filteredOrders.slice(
@@ -102,11 +132,12 @@ export default function OrderList() {
     setStatusFilter('');
     setTypeFilter('');
     setUrgencyFilter('');
+    setSatisfactionFilter('');
     setRoomSearch('');
     setCurrentPage(1);
   };
 
-  const hasFilters = statusFilter || typeFilter || urgencyFilter || roomSearch;
+  const hasFilters = statusFilter || typeFilter || urgencyFilter || satisfactionFilter || roomSearch;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -136,7 +167,7 @@ export default function OrderList() {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1.5">
                 工单状态
@@ -199,6 +230,25 @@ export default function OrderList() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                评价状态
+              </label>
+              <select
+                value={satisfactionFilter}
+                onChange={(e) => {
+                  setSatisfactionFilter(e.target.value as SatisfactionFilter);
+                  setCurrentPage(1);
+                }}
+                className="select-field"
+              >
+                {SATISFACTION_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
                 房号搜索
               </label>
               <div className="relative">
@@ -251,6 +301,9 @@ export default function OrderList() {
                         状态
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        评价状态
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         派单人
                       </th>
                       <th
@@ -295,9 +348,77 @@ export default function OrderList() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className={cn('badge border', getStatusColor(order.status))}>
-                            {order.status}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={cn('badge border', getStatusColor(order.status))}>
+                              {order.status}
+                            </span>
+                            {(() => {
+                              const complaint = getOrderComplaint(order.id);
+                              if (!complaint) return null;
+                              const isPending = complaint.status === '待处理';
+                              return (
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium',
+                                    isPending
+                                      ? 'bg-red-100 text-red-600 border border-red-200'
+                                      : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                                  )}
+                                  title={complaint.comment}
+                                >
+                                  <AlertTriangle className="w-3 h-3" />
+                                  {isPending ? '客诉待处理' : '客诉处理中'}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          {order.satisfactionRating !== undefined ? (
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={cn(
+                                      'w-3.5 h-3.5',
+                                      star <= order.satisfactionRating!
+                                        ? order.satisfactionRating! <= 2
+                                          ? 'fill-red-500 text-red-500'
+                                          : order.satisfactionRating! === 3
+                                          ? 'fill-yellow-500 text-yellow-500'
+                                          : 'fill-green-500 text-green-500'
+                                        : 'text-gray-300'
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                              <span
+                                className={cn(
+                                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
+                                  order.satisfactionRating! <= 2
+                                    ? 'bg-red-50 text-red-600'
+                                    : order.satisfactionRating! === 3
+                                    ? 'bg-yellow-50 text-yellow-600'
+                                    : 'bg-green-50 text-green-600'
+                                )}
+                              >
+                                {order.satisfactionRating! >= 4 ? (
+                                  <ThumbsUp className="w-3 h-3" />
+                                ) : (
+                                  <ThumbsDown className="w-3 h-3" />
+                                )}
+                                {order.satisfactionRating! >= 4 ? '好评' : '差评'}
+                              </span>
+                            </div>
+                          ) : order.status === '已完成' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+                              <Star className="w-3 h-3" />
+                              未评价
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="text-sm text-gray-600">
