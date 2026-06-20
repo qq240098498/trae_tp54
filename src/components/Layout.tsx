@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   Smartphone,
   Package,
+  Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
@@ -33,6 +34,7 @@ const menuItems: MenuItem[] = [
   { path: '/orders', label: '报修工单', icon: ClipboardList, roles: ['admin', 'worker', 'owner'] },
   { path: '/workbench', label: '维修工工作台', icon: Wrench, roles: ['worker', 'admin'] },
   { path: '/repair/new', label: '报修登记', icon: Home, roles: ['owner', 'admin'] },
+  { path: '/property-fees', label: '物业费管理', icon: Wallet, roles: ['admin', 'owner'] },
   { path: '/inventory', label: '耗材库存', icon: Package, roles: ['admin', 'worker'] },
   { path: '/workers', label: '维修工管理', icon: UserCog, roles: ['admin'] },
   { path: '/inspection/plans', label: '巡检计划', icon: ClipboardCheck, roles: ['admin'] },
@@ -57,6 +59,7 @@ const breadcrumbMap: Record<string, string> = {
   '/inspection/tasks': '巡检记录',
   '/inspection/mobile': '巡检作业',
   '/inventory': '耗材库存',
+  '/property-fees': '物业费管理',
   '/settings': '系统设置',
 };
 

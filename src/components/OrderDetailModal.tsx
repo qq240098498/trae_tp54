@@ -1,7 +1,7 @@
-import { X, MapPin, User, Phone, FileText, Clock, AlertTriangle, Package, CheckSquare, Wrench } from 'lucide-react';
+import { X, MapPin, User, Phone, FileText, Clock, AlertTriangle, Package, CheckSquare, Wrench, Wallet } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { RepairOrder } from '@/types';
-import { formatDateTime, getUrgencyColor, getStatusColor, formatCurrency, getRelativeTime } from '@/utils';
+import { formatDateTime, getUrgencyColor, getStatusColor, formatCurrency, getRelativeTime, checkPropertyFeeStatus } from '@/utils';
 import { cn } from '@/lib/utils';
 
 interface OrderDetailModalProps {
@@ -11,12 +11,29 @@ interface OrderDetailModalProps {
 }
 
 export default function OrderDetailModal({ open, onClose, order }: OrderDetailModalProps) {
-  const { workers } = useAppStore();
+  const { workers, propertyFees } = useAppStore();
 
   if (!open || !order) return null;
 
   const assignee = order.assigneeId ? workers.find((w) => w.id === order.assigneeId) : null;
   const totalMaterialCost = order.materials.reduce((sum, m) => sum + m.totalPrice, 0);
+
+  const feeRecord = propertyFees.find(
+    (p) => p.roomNumber.trim().toLowerCase() === order.roomNumber.trim().toLowerCase()
+  );
+  const feeCheck = checkPropertyFeeStatus(feeRecord);
+  const feeBadgeColor =
+    feeCheck.level === 'danger'
+      ? 'bg-orange-100 text-orange-700'
+      : feeCheck.level === 'warning'
+      ? 'bg-yellow-100 text-yellow-700'
+      : 'bg-green-100 text-green-700';
+  const feeTextColor =
+    feeCheck.level === 'danger'
+      ? 'text-orange-600'
+      : feeCheck.level === 'warning'
+      ? 'text-yellow-700'
+      : 'text-green-700';
 
   const timelineIcons = {
     待派单: FileText,
@@ -118,6 +135,22 @@ export default function OrderDetailModal({ open, onClose, order }: OrderDetailMo
                       联系电话
                     </span>
                     <span className="text-gray-900">{order.ownerPhone}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <Wallet className="w-3.5 h-3.5" />
+                      物业费
+                    </span>
+                    {feeCheck.record ? (
+                      <div className="flex items-center gap-2 text-right">
+                        <span className={cn('badge', feeBadgeColor)}>
+                          {feeCheck.record.status}
+                        </span>
+                        <span className={cn('text-xs', feeTextColor)}>{feeCheck.message}</span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-xs">未查询到物业费记录</span>
+                    )}
                   </div>
                 </div>
               </div>

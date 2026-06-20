@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Eye, UserPlus, ClipboardList, Star, ThumbsUp, ThumbsDown, AlertTriangle } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Eye, UserPlus, ClipboardList, Star, ThumbsUp, ThumbsDown, AlertTriangle, Wallet } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { RepairOrder, OrderStatus, RepairType, UrgencyLevel, ORDER_STATUSES, REPAIR_TYPES, URGENCY_LEVELS, URGENCY_WEIGHT, ComplaintTodo } from '@/types';
-import { formatDateTime, getUrgencyColor, getStatusColor, sortOrders } from '@/utils';
+import { formatDateTime, getUrgencyColor, getStatusColor, sortOrders, checkPropertyFeeStatus } from '@/utils';
 import { cn } from '@/lib/utils';
 import AssignWorkerModal from '@/components/AssignWorkerModal';
 import OrderDetailModal from '@/components/OrderDetailModal';
@@ -23,7 +23,7 @@ const SATISFACTION_FILTER_OPTIONS: { value: SatisfactionFilter; label: string }[
 ];
 
 export default function OrderList() {
-  const { orders, complaintTodos } = useAppStore();
+  const { orders, complaintTodos, propertyFees } = useAppStore();
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
   const [typeFilter, setTypeFilter] = useState<RepairType | ''>('');
@@ -40,6 +40,31 @@ export default function OrderList() {
 
   const getOrderComplaint = (orderId: string): ComplaintTodo | undefined => {
     return complaintTodos.find((c) => c.orderId === orderId);
+  };
+
+  const getPropertyFeeBadge = (roomNumber: string) => {
+    const keyword = roomNumber.trim().toLowerCase();
+    const record = propertyFees.find(
+      (p) => p.roomNumber.trim().toLowerCase() === keyword
+    );
+    const check = checkPropertyFeeStatus(record);
+    if (check.level === 'danger') {
+      return {
+        show: true,
+        text: `欠费${check.record?.arrearsMonths}月`,
+        title: check.message,
+        className: 'bg-orange-100 text-orange-700 border-orange-200',
+      };
+    }
+    if (check.level === 'warning') {
+      return {
+        show: true,
+        text: `欠费${check.record?.arrearsMonths}月`,
+        title: check.message,
+        className: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      };
+    }
+    return { show: false, text: '', title: '', className: '' };
   };
 
   const filteredOrders = useMemo(() => {
@@ -335,9 +360,27 @@ export default function OrderList() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
-                          <span className="text-sm text-gray-900 font-medium">
-                            {order.roomNumber}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm text-gray-900 font-medium">
+                              {order.roomNumber}
+                            </span>
+                            {(() => {
+                              const feeBadge = getPropertyFeeBadge(order.roomNumber);
+                              if (!feeBadge.show) return null;
+                              return (
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium w-fit',
+                                    feeBadge.className
+                                  )}
+                                  title={feeBadge.title}
+                                >
+                                  <Wallet className="w-2.5 h-2.5" />
+                                  {feeBadge.text}
+                                </span>
+                              );
+                            })()}
+                          </div>
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="text-sm text-gray-700">{order.repairType}</span>
@@ -514,6 +557,7 @@ export default function OrderList() {
         }}
         repairType={selectedOrder?.repairType || '水电'}
         orderNo={selectedOrder?.orderNo || ''}
+        roomNumber={selectedOrder?.roomNumber}
       />
 
       <OrderDetailModal

@@ -1,4 +1,4 @@
-import { UrgencyLevel, OrderStatus, URGENCY_WEIGHT, ESCALATION_THRESHOLD_MS, InspectionPlan, InspectionCycle } from '@/types';
+import { UrgencyLevel, OrderStatus, URGENCY_WEIGHT, ESCALATION_THRESHOLD_MS, InspectionPlan, InspectionCycle, PropertyFeeRecord, PROPERTY_FEE_ARREARS_THRESHOLD } from '@/types';
 
 export function generateOrderNo(): string {
   const now = new Date();
@@ -181,4 +181,37 @@ export function getCycleLabel(cycle: InspectionCycle): string {
     default:
       return '';
   }
+}
+
+export type PropertyFeeCheckLevel = 'normal' | 'warning' | 'danger';
+
+export interface PropertyFeeCheckResult {
+  level: PropertyFeeCheckLevel;
+  record: PropertyFeeRecord | null;
+  message: string;
+}
+
+export function checkPropertyFeeStatus(record: PropertyFeeRecord | null | undefined): PropertyFeeCheckResult {
+  if (!record) {
+    return { level: 'normal', record: null, message: '' };
+  }
+  if (record.status === '正常' || record.arrearsMonths <= 0) {
+    return {
+      level: 'normal',
+      record,
+      message: `物业费缴纳正常${record.lastPaymentDate ? `，最近缴费：${record.lastPaymentDate}` : ''}`,
+    };
+  }
+  if (record.arrearsMonths > PROPERTY_FEE_ARREARS_THRESHOLD) {
+    return {
+      level: 'danger',
+      record,
+      message: `该业主物业费已欠费 ${record.arrearsMonths} 个月，累计欠费 ${formatCurrency(record.totalArrears)}`,
+    };
+  }
+  return {
+    level: 'warning',
+    record,
+    message: `该业主物业费欠费 ${record.arrearsMonths} 个月，累计欠费 ${formatCurrency(record.totalArrears)}`,
+  };
 }

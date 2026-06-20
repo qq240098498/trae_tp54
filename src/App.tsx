@@ -12,6 +12,7 @@ import InspectionPlans from '@/pages/InspectionPlans';
 import InspectionTasks from '@/pages/InspectionTasks';
 import InspectionMobile from '@/pages/InspectionMobile';
 import InventoryManagement from '@/pages/InventoryManagement';
+import PropertyFeeManagement from '@/pages/PropertyFeeManagement';
 import { useAppStore } from '@/store';
 
 export default function App() {
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="inspection/mobile" element={<InspectionMobile />} />
           <Route path="inspection" element={<Navigate to="/inspection/tasks" replace />} />
           <Route path="inventory" element={<InventoryManagement />} />
+          <Route path="property-fees" element={<PropertyFeeManagement />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

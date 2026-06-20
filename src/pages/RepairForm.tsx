@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppStore } from '@/store';
 import { REPAIR_TYPES, URGENCY_LEVELS } from '@/types';
 import type { RepairType, UrgencyLevel } from '@/types';
+import { checkPropertyFeeStatus } from '@/utils';
+import { cn } from '@/lib/utils';
 import {
   Home,
   User,
@@ -12,6 +14,7 @@ import {
   Send,
   RefreshCw,
   Building2,
+  Wallet,
 } from 'lucide-react';
 
 interface FormData {
@@ -59,6 +62,7 @@ function getUrgencyDotColor(urgency: UrgencyLevel) {
 export default function RepairForm() {
   const createOrder = useAppStore((s) => s.createOrder);
   const toasts = useAppStore((s) => s.toasts);
+  const propertyFees = useAppStore((s) => s.propertyFees);
 
   const [formData, setFormData] = useState<FormData>({
     roomNumber: '',
@@ -72,6 +76,15 @@ export default function RepairForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdOrderNo, setCreatedOrderNo] = useState('');
+
+  const propertyFeeCheck = useMemo(() => {
+    const keyword = formData.roomNumber.trim().toLowerCase();
+    if (!keyword) return null;
+    const record = propertyFees.find(
+      (p) => p.roomNumber.trim().toLowerCase() === keyword
+    );
+    return checkPropertyFeeStatus(record);
+  }, [formData.roomNumber, propertyFees]);
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -232,6 +245,72 @@ export default function RepairForm() {
                 <p className="mt-1 text-xs text-red-500">{errors.ownerPhone}</p>
               )}
             </div>
+
+            {propertyFeeCheck && propertyFeeCheck.record && (
+              <div
+                className={cn(
+                  'rounded-lg border p-3',
+                  propertyFeeCheck.level === 'danger'
+                    ? 'bg-orange-50 border-orange-200'
+                    : propertyFeeCheck.level === 'warning'
+                    ? 'bg-yellow-50 border-yellow-200'
+                    : 'bg-green-50 border-green-200'
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  {propertyFeeCheck.level === 'normal' ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                  ) : (
+                    <AlertTriangle
+                      className={cn(
+                        'w-4 h-4 mt-0.5 shrink-0',
+                        propertyFeeCheck.level === 'danger' ? 'text-orange-600' : 'text-yellow-600'
+                      )}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Wallet className="w-3.5 h-3.5 text-gray-500" />
+                      <span className="text-xs font-medium text-gray-500">物业费缴纳状态</span>
+                      <span
+                        className={cn(
+                          'badge',
+                          propertyFeeCheck.level === 'danger'
+                            ? 'bg-orange-100 text-orange-700'
+                            : propertyFeeCheck.level === 'warning'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-green-100 text-green-700'
+                        )}
+                      >
+                        {propertyFeeCheck.record.status}
+                      </span>
+                    </div>
+                    <p
+                      className={cn(
+                        'text-sm mt-1',
+                        propertyFeeCheck.level === 'danger'
+                          ? 'text-orange-700'
+                          : propertyFeeCheck.level === 'warning'
+                          ? 'text-yellow-700'
+                          : 'text-green-700'
+                      )}
+                    >
+                      {propertyFeeCheck.message}
+                    </p>
+                    {propertyFeeCheck.level === 'danger' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        欠费已超过3个月，已标记提示。本次报修正常受理，不受影响，请同步提醒业主尽快缴费。
+                      </p>
+                    )}
+                    {propertyFeeCheck.level === 'warning' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        提示信息，不影响报修受理。
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1.5">

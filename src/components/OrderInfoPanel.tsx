@@ -7,16 +7,31 @@ import {
   Clock,
   UserCheck,
   Hash,
+  Wallet,
 } from 'lucide-react';
 import { RepairOrder } from '@/types';
-import { formatDateTime, getStatusColor, getUrgencyColor } from '@/utils';
+import { formatDateTime, getStatusColor, getUrgencyColor, checkPropertyFeeStatus } from '@/utils';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store';
 
 interface OrderInfoPanelProps {
   order: RepairOrder;
 }
 
 export default function OrderInfoPanel({ order }: OrderInfoPanelProps) {
+  const { propertyFees } = useAppStore();
+
+  const feeRecord = propertyFees.find(
+    (p) => p.roomNumber.trim().toLowerCase() === order.roomNumber.trim().toLowerCase()
+  );
+  const feeCheck = checkPropertyFeeStatus(feeRecord);
+
+  const getFeeBadgeClass = () => {
+    if (feeCheck.level === 'danger') return 'bg-orange-100 text-orange-700 border-orange-200';
+    if (feeCheck.level === 'warning') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-green-100 text-green-700 border-green-200';
+  };
+
   const infoItems = [
     {
       icon: Hash,
@@ -49,6 +64,14 @@ export default function OrderInfoPanel({ order }: OrderInfoPanelProps) {
       value: order.urgency,
       isBadge: true,
       badgeClass: getUrgencyColor(order.urgency),
+    },
+    {
+      icon: Wallet,
+      label: '物业费状态',
+      value: feeCheck.record?.status || '未查询',
+      isBadge: true,
+      badgeClass: getFeeBadgeClass(),
+      tooltip: feeCheck.message || '未查询到物业费记录',
     },
     {
       icon: Clock,
@@ -84,6 +107,7 @@ export default function OrderInfoPanel({ order }: OrderInfoPanelProps) {
           <div
             key={index}
             className="flex items-start gap-3 p-3 rounded-lg bg-primary-50/50 hover:bg-primary-50 transition-colors"
+            title={(item as any).tooltip}
           >
             <div className="p-2 rounded-lg bg-primary-100 text-primary-700 shrink-0">
               <item.icon className="w-4 h-4" />
@@ -106,6 +130,38 @@ export default function OrderInfoPanel({ order }: OrderInfoPanelProps) {
           </div>
         ))}
       </div>
+      {feeCheck.level !== 'normal' && feeCheck.record && (
+        <div
+          className={cn(
+            'mt-4 p-3 rounded-lg border flex items-start gap-2',
+            feeCheck.level === 'danger'
+              ? 'bg-orange-50 border-orange-200'
+              : 'bg-yellow-50 border-yellow-200'
+          )}
+        >
+          <Wallet
+            className={cn(
+              'w-4 h-4 mt-0.5 shrink-0',
+              feeCheck.level === 'danger' ? 'text-orange-600' : 'text-yellow-600'
+            )}
+          />
+          <div className="flex-1 min-w-0">
+            <p
+              className={cn(
+                'text-sm',
+                feeCheck.level === 'danger' ? 'text-orange-700' : 'text-yellow-700'
+              )}
+            >
+              {feeCheck.message}
+            </p>
+            {feeCheck.level === 'danger' && (
+              <p className="text-xs text-gray-500 mt-1">
+                欠费已超过3个月，已标记提示。本次报修正常受理，不受影响。
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

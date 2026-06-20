@@ -24,8 +24,9 @@ import {
   SatisfactionRating,
   ComplaintTodo,
   ComplaintStatus,
+  PropertyFeeRecord,
 } from '@/types';
-import { mockOrders, mockWorkers, mockUsers, mockInspectionPlans, mockInspectionTasks, mockInventoryItems, mockStockTransactions, mockComplaintTodos } from '@/data/mockData';
+import { mockOrders, mockWorkers, mockUsers, mockInspectionPlans, mockInspectionTasks, mockInventoryItems, mockStockTransactions, mockComplaintTodos, mockPropertyFees } from '@/data/mockData';
 import {
   generateOrderNo,
   generateId,
@@ -47,6 +48,7 @@ interface AppState {
   inventoryItems: InventoryItem[];
   stockTransactions: StockTransaction[];
   complaintTodos: ComplaintTodo[];
+  propertyFees: PropertyFeeRecord[];
 
   setCurrentUser: (userId: string) => void;
   switchRole: (role: UserRole) => void;
@@ -140,6 +142,14 @@ interface AppState {
   assignComplaint: (complaintId: string, assigneeId: string, assigneeName: string, operator: string) => void;
   getPendingComplaints: () => ComplaintTodo[];
 
+  getPropertyFeeByRoom: (roomNumber: string) => PropertyFeeRecord | undefined;
+  payPropertyFee: (recordId: string, months: number, operator: string) => void;
+  updatePropertyFee: (
+    recordId: string,
+    data: Partial<Pick<PropertyFeeRecord, 'monthlyFee' | 'arrearsMonths' | 'totalArrears' | 'lastPaymentDate' | 'status'>>,
+    operator: string
+  ) => void;
+
   resetData: () => void;
 }
 
@@ -156,6 +166,7 @@ export const useAppStore = create<AppState>()(
       inventoryItems: mockInventoryItems,
       stockTransactions: mockStockTransactions,
       complaintTodos: mockComplaintTodos,
+      propertyFees: mockPropertyFees,
 
       setCurrentUser: (userId) => {
         const user = get().users.find((u) => u.id === userId);
@@ -835,6 +846,65 @@ export const useAppStore = create<AppState>()(
         return get().complaintTodos.filter((c) => c.status === '待处理' || c.status === '处理中');
       },
 
+      getPropertyFeeByRoom: (roomNumber) => {
+        const keyword = roomNumber.trim().toLowerCase();
+        if (!keyword) return undefined;
+        return get().propertyFees.find(
+          (p) => p.roomNumber.trim().toLowerCase() === keyword
+        );
+      },
+
+      payPropertyFee: (recordId, months, operator) => {
+        const record = get().propertyFees.find((p) => p.id === recordId);
+        if (!record || months <= 0) return;
+        const newArrearsMonths = Math.max(0, record.arrearsMonths - months);
+        const newTotalArrears = newArrearsMonths * record.monthlyFee;
+        const today = toDateKey(new Date());
+        set((s) => ({
+          propertyFees: s.propertyFees.map((p) =>
+            p.id === recordId
+              ? {
+                  ...p,
+                  arrearsMonths: newArrearsMonths,
+                  totalArrears: newTotalArrears,
+                  lastPaymentDate: today,
+                  status: newArrearsMonths <= 0 ? '正常' : '欠费',
+                }
+              : p
+          ),
+        }));
+        get().addToast(
+          'success',
+          `${record.roomNumber} 已登记缴费 ${months} 个月，操作人：${operator}`
+        );
+      },
+
+      updatePropertyFee: (recordId, data, operator) => {
+        const record = get().propertyFees.find((p) => p.id === recordId);
+        if (!record) return;
+        const nextArrearsMonths = data.arrearsMonths ?? record.arrearsMonths;
+        const nextMonthlyFee = data.monthlyFee ?? record.monthlyFee;
+        const nextTotalArrears =
+          data.totalArrears ?? nextArrearsMonths * nextMonthlyFee;
+        const nextStatus =
+          data.status ?? (nextArrearsMonths <= 0 ? '正常' : '欠费');
+        set((s) => ({
+          propertyFees: s.propertyFees.map((p) =>
+            p.id === recordId
+              ? {
+                  ...p,
+                  monthlyFee: nextMonthlyFee,
+                  arrearsMonths: nextArrearsMonths,
+                  totalArrears: nextTotalArrears,
+                  lastPaymentDate: data.lastPaymentDate ?? p.lastPaymentDate,
+                  status: nextStatus,
+                }
+              : p
+          ),
+        }));
+        get().addToast('success', `物业费记录已更新，操作人：${operator}`);
+      },
+
       resetData: () => {
         set({
           orders: mockOrders,
@@ -847,6 +917,7 @@ export const useAppStore = create<AppState>()(
           inventoryItems: mockInventoryItems,
           stockTransactions: mockStockTransactions,
           complaintTodos: mockComplaintTodos,
+          propertyFees: mockPropertyFees,
         });
         localStorage.removeItem('repair-management-storage');
         get().addToast('success', '数据已重置');
@@ -867,6 +938,7 @@ export const useAppStore = create<AppState>()(
             inventoryItems: mockInventoryItems,
             stockTransactions: mockStockTransactions,
             complaintTodos: mockComplaintTodos,
+            propertyFees: mockPropertyFees,
           };
         }
         return {
@@ -876,6 +948,7 @@ export const useAppStore = create<AppState>()(
             : mockInventoryItems,
           stockTransactions: persistedState.stockTransactions || mockStockTransactions,
           complaintTodos: persistedState.complaintTodos || mockComplaintTodos,
+          propertyFees: persistedState.propertyFees || mockPropertyFees,
         };
       },
     }

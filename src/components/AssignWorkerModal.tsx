@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { X, User, Phone, Wrench, Star, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, User, Phone, Wrench, Star, Clock, CheckCircle, AlertCircle, Wallet, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { RepairType, Worker } from '@/types';
 import { cn } from '@/lib/utils';
+import { checkPropertyFeeStatus } from '@/utils';
 
 interface AssignWorkerModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface AssignWorkerModalProps {
   onAssign: (workerId: string) => void;
   repairType: RepairType;
   orderNo: string;
+  roomNumber?: string;
 }
 
 interface WorkerWithScore extends Worker {
@@ -29,9 +31,19 @@ export default function AssignWorkerModal({
   onAssign,
   repairType,
   orderNo,
+  roomNumber,
 }: AssignWorkerModalProps) {
-  const { workers, orders } = useAppStore();
+  const { workers, orders, propertyFees } = useAppStore();
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+
+  const propertyFeeCheck = useMemo(() => {
+    if (!roomNumber) return null;
+    const keyword = roomNumber.trim().toLowerCase();
+    const record = propertyFees.find(
+      (p) => p.roomNumber.trim().toLowerCase() === keyword
+    );
+    return checkPropertyFeeStatus(record);
+  }, [roomNumber, propertyFees]);
 
   const sortedWorkers = useMemo<WorkerWithScore[]>(() => {
     return workers
@@ -87,6 +99,73 @@ export default function AssignWorkerModal({
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
+
+        {/* 物业费状态提示 */}
+        {propertyFeeCheck && propertyFeeCheck.record && propertyFeeCheck.level !== 'normal' && (
+          <div
+            className={cn(
+              'mx-6 mt-4 p-3 rounded-xl flex items-start gap-3 border',
+              propertyFeeCheck.level === 'danger'
+                ? 'bg-orange-50 border-orange-200'
+                : 'bg-yellow-50 border-yellow-200'
+            )}
+          >
+            {propertyFeeCheck.level === 'danger' ? (
+              <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            ) : (
+              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            )}
+            <div className="text-sm flex-1">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-gray-500" />
+                <span
+                  className={cn(
+                    'font-semibold',
+                    propertyFeeCheck.level === 'danger' ? 'text-orange-800' : 'text-yellow-800'
+                  )}
+                >
+                  业主物业费状态：
+                </span>
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded-full text-xs font-medium',
+                    propertyFeeCheck.level === 'danger'
+                      ? 'bg-orange-100 text-orange-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                  )}
+                >
+                  {propertyFeeCheck.record.status}
+                </span>
+              </div>
+              <p
+                className={cn(
+                  'mt-1',
+                  propertyFeeCheck.level === 'danger' ? 'text-orange-700' : 'text-yellow-700'
+                )}
+              >
+                {propertyFeeCheck.message}
+              </p>
+              {propertyFeeCheck.level === 'danger' && (
+                <p className="text-xs text-gray-500 mt-1">
+                  欠费已超过3个月，建议派单时同步提醒业主尽快缴费，本次报修正常受理不受影响。
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {propertyFeeCheck && propertyFeeCheck.level === 'normal' && (
+          <div className="mx-6 mt-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-gray-500" />
+                <span className="font-semibold text-green-800">物业费缴纳正常</span>
+              </div>
+              <p className="text-green-700 mt-1">{propertyFeeCheck.message}</p>
+            </div>
+          </div>
+        )}
 
         {/* 推荐提示 */}
         {recommendedWorker && (

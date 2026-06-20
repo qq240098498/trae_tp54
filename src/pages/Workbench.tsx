@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { MapPin, User, Phone, FileText, Clock, AlertTriangle, Package, Wrench, CheckCircle, PlayCircle, ClipboardCheck, Wrench as WrenchIcon } from 'lucide-react';
+import { MapPin, User, Phone, FileText, Clock, AlertTriangle, Package, Wrench, CheckCircle, PlayCircle, ClipboardCheck, Wrench as WrenchIcon, Wallet } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { RepairOrder, URGENCY_WEIGHT } from '@/types';
-import { formatDateTime, getUrgencyBadge, formatCurrency, getRelativeTime } from '@/utils';
+import { formatDateTime, getUrgencyBadge, formatCurrency, getRelativeTime, checkPropertyFeeStatus } from '@/utils';
 import { cn } from '@/lib/utils';
 import Empty from '@/components/Empty';
 import OrderDetailModal from '@/components/OrderDetailModal';
@@ -24,6 +24,7 @@ function OrderCard({
   onViewDetail,
   isUrgent,
   canAccept,
+  propertyFees,
 }: {
   order: RepairOrder;
   tabKey: TabKey;
@@ -33,6 +34,7 @@ function OrderCard({
   onViewDetail: () => void;
   isUrgent: boolean;
   canAccept?: boolean;
+  propertyFees: ReturnType<typeof useAppStore.getState>['propertyFees'];
 }) {
   const [arriveRemark, setArriveRemark] = useState('');
   const [completeRemark, setCompleteRemark] = useState('');
@@ -40,6 +42,11 @@ function OrderCard({
   const [showCompleteInput, setShowCompleteInput] = useState(false);
 
   const totalMaterialCost = order.materials.reduce((sum, m) => sum + m.totalPrice, 0);
+
+  const feeRecord = propertyFees.find(
+    (p) => p.roomNumber.trim().toLowerCase() === order.roomNumber.trim().toLowerCase()
+  );
+  const feeCheck = checkPropertyFeeStatus(feeRecord);
 
   const handleArrive = () => {
     onArrive(arriveRemark || '已到达现场');
@@ -79,13 +86,34 @@ function OrderCard({
                 <span className="badge bg-orange-500 text-white">已自动升级</span>
               )}
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary-600" />
-              {order.roomNumber}
-            </h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary-600" />
+                {order.roomNumber}
+              </h3>
+              {feeCheck.level !== 'normal' && feeCheck.record && (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border',
+                    feeCheck.level === 'danger'
+                      ? 'bg-orange-100 text-orange-700 border-orange-200'
+                      : 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                  )}
+                  title={feeCheck.message}
+                >
+                  <Wallet className="w-3 h-3" />
+                  欠费{feeCheck.record.arrearsMonths}月
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500 mt-1">
               {order.repairType} · {getRelativeTime(order.createdAt)}
             </p>
+            {feeCheck.level === 'danger' && feeCheck.record && (
+              <p className="text-xs text-orange-600 mt-1 bg-orange-50 px-2 py-1 rounded">
+                ⚠️ 业主物业费已欠费{feeCheck.record.arrearsMonths}个月（累计{formatCurrency(feeCheck.record.totalArrears)}），上门服务时可同步提醒缴费
+              </p>
+            )}
           </div>
           <button
             onClick={onViewDetail}
@@ -264,7 +292,7 @@ function OrderCard({
 }
 
 export default function Workbench() {
-  const { orders, currentUser, acceptOrder, updateOrderStatus, addToast } = useAppStore();
+  const { orders, currentUser, acceptOrder, updateOrderStatus, addToast, propertyFees } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<RepairOrder | null>(null);
@@ -407,6 +435,7 @@ export default function Workbench() {
                       onViewDetail={() => handleViewDetail(order)}
                       isUrgent={isUrgent}
                       canAccept={canAccept}
+                      propertyFees={propertyFees}
                     />
                   );
                 })}

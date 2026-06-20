@@ -18,10 +18,12 @@ import {
   AlertCircle,
   Star,
   ThumbsDown,
+  Wallet,
 } from 'lucide-react';
 import type { RepairOrder, OrderStatus, UrgencyLevel } from '@/types';
-import { URGENCY_WEIGHT } from '@/types';
+import { URGENCY_WEIGHT, PROPERTY_FEE_ARREARS_THRESHOLD } from '@/types';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/utils';
 
 function getUrgencyColor(urgency: UrgencyLevel) {
   switch (urgency) {
@@ -191,6 +193,7 @@ export default function Dashboard() {
   const addStockTransaction = useAppStore((s) => s.addStockTransaction);
   const currentUser = useAppStore((s) => s.currentUser);
   const complaintTodos = useAppStore((s) => s.complaintTodos);
+  const propertyFees = useAppStore((s) => s.propertyFees);
 
   const stats = useMemo(() => {
     const today = new Date();
@@ -212,6 +215,21 @@ export default function Dashboard() {
       lowStock: inventoryItems.filter((i) => i.stock < i.safeStock),
     };
   }, [inventoryItems]);
+
+  const propertyFeeStats = useMemo(() => {
+    const total = propertyFees.length;
+    const arrearsCount = propertyFees.filter(
+      (p) => p.arrearsMonths > 0
+    ).length;
+    const dangerCount = propertyFees.filter(
+      (p) => p.arrearsMonths > PROPERTY_FEE_ARREARS_THRESHOLD
+    ).length;
+    const totalArrearsAmount = propertyFees.reduce(
+      (sum, p) => sum + (p.arrearsMonths > 0 ? p.totalArrears : 0),
+      0
+    );
+    return { total, arrearsCount, dangerCount, totalArrearsAmount };
+  }, [propertyFees]);
 
   const complaintStats = useMemo(() => {
     return {
@@ -323,6 +341,31 @@ export default function Dashboard() {
                     </span>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {propertyFeeStats.dangerCount > 0 && currentUser.role === 'admin' && (
+          <div
+            className="card p-5 mb-6 border-2 border-orange-300 bg-orange-50/50 opacity-0 animate-fade-in-up cursor-pointer hover:shadow-md transition-shadow"
+            style={{ animationDelay: '225ms' }}
+            onClick={() => navigate('/property-fees')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-orange-100 shrink-0">
+                <Wallet className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-bold text-orange-800">
+                    物业费欠费预警：{propertyFeeStats.dangerCount} 户严重欠费（超{PROPERTY_FEE_ARREARS_THRESHOLD}个月）
+                  </h3>
+                  <ChevronRight className="w-5 h-5 text-orange-400 shrink-0" />
+                </div>
+                <p className="text-sm text-orange-700 mt-1">
+                  累计欠费 {propertyFeeStats.arrearsCount} 户，合计 {formatCurrency(propertyFeeStats.totalArrearsAmount)}。报修受理已自动标记提示但不会拦截，建议尽快催缴。
+                </p>
               </div>
             </div>
           </div>
@@ -484,6 +527,54 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                     <span className="text-sm font-medium text-green-800">库存状态良好</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div
+              className="card p-6 opacity-0 animate-fade-in-up cursor-pointer hover:shadow-md transition-all"
+              style={{ animationDelay: '340ms' }}
+              onClick={() => navigate('/property-fees')}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-primary-700" />
+                  <h2 className="text-lg font-semibold text-gray-800">物业费概览</h2>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="p-3 rounded-lg bg-primary-50 text-center">
+                  <p className="text-2xl font-bold text-primary-800 tabular-nums">
+                    {propertyFeeStats.total.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">业主户数</p>
+                </div>
+                <div className="p-3 rounded-lg bg-orange-50 text-center">
+                  <p className="text-2xl font-bold text-orange-700 tabular-nums">
+                    {propertyFeeStats.arrearsCount.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">欠费户数</p>
+                </div>
+              </div>
+              {propertyFeeStats.dangerCount > 0 ? (
+                <div className="p-3 rounded-lg bg-orange-50 border border-orange-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="w-4 h-4 text-orange-600 shrink-0" />
+                    <span className="text-sm font-semibold text-orange-800">
+                      {propertyFeeStats.dangerCount} 户严重欠费（超{PROPERTY_FEE_ARREARS_THRESHOLD}月）
+                    </span>
+                  </div>
+                  <p className="text-xs text-orange-700">
+                    累计欠款 {formatCurrency(propertyFeeStats.totalArrearsAmount)}，点击前往催缴
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                    <span className="text-sm font-medium text-green-800">物业费缴纳情况良好</span>
                   </div>
                 </div>
               )}

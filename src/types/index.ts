@@ -255,3 +255,19 @@ export const SATISFACTION_RATING_LABELS: Record<SatisfactionRating, string> = {
   4: '满意',
   5: '非常满意',
 };
+
+export type PropertyFeeStatus = '正常' | '欠费';
+
+export interface PropertyFeeRecord {
+  id: string;
+  roomNumber: string;
+  ownerName: string;
+  ownerPhone: string;
+  monthlyFee: number;
+  arrearsMonths: number;
+  totalArrears: number;
+  lastPaymentDate?: string;
+  status: PropertyFeeStatus;
+}
+
+export const PROPERTY_FEE_ARREARS_THRESHOLD = 3;
