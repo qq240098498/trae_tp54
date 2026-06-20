@@ -22,6 +22,7 @@ export interface MaterialItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  inventoryItemId?: string;
 }
 
 export interface TimelineNode {
@@ -167,3 +168,44 @@ export const DEFAULT_INSPECTION_ITEMS: Record<InspectionCategory, string[]> = {
   '照明': ['楼道照明正常', '地下车库灯亮', '景观灯完好', '应急照明可用', '开关无损坏'],
   '门禁': ['门禁刷卡正常', '道闸起落正常', '可视对讲清晰', '单元门锁闭合到位', '监控画面正常'],
 };
+
+export type MaterialCategory = '灯泡' | '水龙头' | '开关' | '阀门' | '管件';
+
+export type StockTransactionType = '入库' | '出库' | '领用' | '退货' | '盘点';
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: MaterialCategory;
+  spec: string;
+  unit: string;
+  stock: number;
+  safeStock: number;
+  unitPrice: number;
+  supplier?: string;
+  lastRestockDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockTransaction {
+  id: string;
+  inventoryItemId: string;
+  inventoryItemName: string;
+  category: MaterialCategory;
+  type: StockTransactionType;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  stockBefore: number;
+  stockAfter: number;
+  operator: string;
+  orderId?: string;
+  orderNo?: string;
+  remark?: string;
+  createdAt: string;
+}
+
+export const MATERIAL_CATEGORIES: MaterialCategory[] = ['灯泡', '水龙头', '开关', '阀门', '管件'];
+
+export const STOCK_TRANSACTION_TYPES: StockTransactionType[] = ['入库', '出库', '领用', '退货', '盘点'];

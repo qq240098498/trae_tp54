@@ -17,8 +17,12 @@ import {
   InspectionItemResult,
   InspectionItemTemplate,
   INSPECTION_CATEGORY_TO_REPAIR,
+  InventoryItem,
+  StockTransaction,
+  StockTransactionType,
+  MaterialCategory,
 } from '@/types';
-import { mockOrders, mockWorkers, mockUsers, mockInspectionPlans, mockInspectionTasks } from '@/data/mockData';
+import { mockOrders, mockWorkers, mockUsers, mockInspectionPlans, mockInspectionTasks, mockInventoryItems, mockStockTransactions } from '@/data/mockData';
 import {
   generateOrderNo,
   generateId,
@@ -37,6 +41,8 @@ interface AppState {
   toasts: ToastMessage[];
   inspectionPlans: InspectionPlan[];
   inspectionTasks: InspectionTask[];
+  inventoryItems: InventoryItem[];
+  stockTransactions: StockTransaction[];
 
   setCurrentUser: (userId: string) => void;
   switchRole: (role: UserRole) => void;
@@ -90,6 +96,37 @@ interface AppState {
   ) => void;
   submitInspectionTask: (taskId: string, operator: string, remark?: string) => string[];
 
+  addInventoryItem: (data: {
+    name: string;
+    category: MaterialCategory;
+    spec: string;
+    unit: string;
+    stock: number;
+    safeStock: number;
+    unitPrice: number;
+    supplier?: string;
+  }) => void;
+  updateInventoryItem: (
+    id: string,
+    data: Partial<Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>>
+  ) => void;
+  deleteInventoryItem: (id: string) => void;
+  addStockTransaction: (data: {
+    inventoryItemId: string;
+    type: StockTransactionType;
+    quantity: number;
+    unitPrice?: number;
+    operator: string;
+    orderId?: string;
+    orderNo?: string;
+    remark?: string;
+  }) => boolean;
+  getLowStockItems: () => InventoryItem[];
+  consumeInventoryForOrder: (
+    orderId: string,
+    items: Array<{ inventoryItemId: string; quantity: number; operator: string }>
+  ) => boolean;
+
   addToast: (type: ToastMessage['type'], message: string) => void;
   removeToast: (id: string) => void;
 
@@ -106,6 +143,8 @@ export const useAppStore = create<AppState>()(
       toasts: [],
       inspectionPlans: mockInspectionPlans,
       inspectionTasks: mockInspectionTasks,
+      inventoryItems: mockInventoryItems,
+      stockTransactions: mockStockTransactions,
 
       setCurrentUser: (userId) => {
         const user = get().users.find((u) => u.id === userId);
@@ -230,6 +269,53 @@ export const useAppStore = create<AppState>()(
           id: generateId(),
           totalPrice: material.quantity * material.unitPrice,
         };
+
+        if (material.inventoryItemId) {
+          const item = get().inventoryItems.find((i) => i.id === material.inventoryItemId);
+          if (item) {
+            if (item.stock < material.quantity) {
+              get().addToast('error', `${item.name}库存不足，当前库存：${item.stock}${item.unit}`);
+              return;
+            }
+            const order = get().orders.find((o) => o.id === orderId);
+            const now = new Date().toISOString();
+            const stockBefore = item.stock;
+            const stockAfter = item.stock - material.quantity;
+            const transaction: StockTransaction = {
+              id: generateId(),
+              inventoryItemId: item.id,
+              inventoryItemName: item.name,
+              category: item.category,
+              type: '领用',
+              quantity: material.quantity,
+              unitPrice: material.unitPrice,
+              totalPrice: material.quantity * material.unitPrice,
+              stockBefore,
+              stockAfter,
+              operator: get().currentUser.name,
+              orderId,
+              orderNo: order?.orderNo,
+              remark: order?.description ? `维修领用：${order.description.slice(0, 20)}` : '维修领用',
+              createdAt: now,
+            };
+            set((s) => ({
+              inventoryItems: s.inventoryItems.map((i) =>
+                i.id === item.id ? { ...i, stock: stockAfter, updatedAt: now } : i
+              ),
+              stockTransactions: [transaction, ...s.stockTransactions],
+              orders: s.orders.map((o) =>
+                o.id === orderId ? { ...o, materials: [...o.materials, fullMaterial] } : o
+              ),
+            }));
+            if (stockAfter < item.safeStock) {
+              get().addToast('warning', `${item.name}库存已低于安全库存（剩${stockAfter}${item.unit}），请及时补货！`);
+            } else {
+              get().addToast('success', '耗材已添加，库存已扣减');
+            }
+            return;
+          }
+        }
+
         set((s) => ({
           orders: s.orders.map((o) =>
             o.id === orderId ? { ...o, materials: [...o.materials, fullMaterial] } : o
@@ -239,6 +325,45 @@ export const useAppStore = create<AppState>()(
       },
 
       removeMaterial: (orderId, materialId) => {
+        const order = get().orders.find((o) => o.id === orderId);
+        const material = order?.materials.find((m) => m.id === materialId);
+        if (material?.inventoryItemId) {
+          const item = get().inventoryItems.find((i) => i.id === material.inventoryItemId);
+          if (item) {
+            const now = new Date().toISOString();
+            const stockBefore = item.stock;
+            const stockAfter = item.stock + material.quantity;
+            const transaction: StockTransaction = {
+              id: generateId(),
+              inventoryItemId: item.id,
+              inventoryItemName: item.name,
+              category: item.category,
+              type: '退货',
+              quantity: material.quantity,
+              unitPrice: material.unitPrice,
+              totalPrice: material.quantity * material.unitPrice,
+              stockBefore,
+              stockAfter,
+              operator: get().currentUser.name,
+              orderId,
+              orderNo: order?.orderNo,
+              remark: '删除耗材，退回库存',
+              createdAt: now,
+            };
+            set((s) => ({
+              inventoryItems: s.inventoryItems.map((i) =>
+                i.id === item.id ? { ...i, stock: stockAfter, updatedAt: now } : i
+              ),
+              stockTransactions: [transaction, ...s.stockTransactions],
+              orders: s.orders.map((o) =>
+                o.id === orderId
+                  ? { ...o, materials: o.materials.filter((m) => m.id !== materialId) }
+                  : o
+              ),
+            }));
+            return;
+          }
+        }
         set((s) => ({
           orders: s.orders.map((o) =>
             o.id === orderId
@@ -470,6 +595,143 @@ export const useAppStore = create<AppState>()(
         return convertedOrderIds;
       },
 
+      addInventoryItem: (data) => {
+        const now = new Date().toISOString();
+        const item: InventoryItem = {
+          ...data,
+          id: generateId(),
+          lastRestockDate: data.stock > 0 ? toDateKey(new Date()) : undefined,
+          createdAt: now,
+          updatedAt: now,
+        };
+        set((s) => ({ inventoryItems: [item, ...s.inventoryItems] }));
+        get().addToast('success', `库存物品「${item.name}」已创建`);
+      },
+
+      updateInventoryItem: (id, data) => {
+        const item = get().inventoryItems.find((i) => i.id === id);
+        if (!item) return;
+        const now = new Date().toISOString();
+        set((s) => ({
+          inventoryItems: s.inventoryItems.map((i) =>
+            i.id === id ? { ...i, ...data, updatedAt: now } : i
+          ),
+        }));
+        get().addToast('success', '库存物品已更新');
+      },
+
+      deleteInventoryItem: (id) => {
+        const item = get().inventoryItems.find((i) => i.id === id);
+        set((s) => ({ inventoryItems: s.inventoryItems.filter((i) => i.id !== id) }));
+        get().addToast('info', `库存物品「${item?.name ?? ''}」已删除`);
+      },
+
+      addStockTransaction: (data) => {
+        const item = get().inventoryItems.find((i) => i.id === data.inventoryItemId);
+        if (!item) return false;
+
+        const now = new Date().toISOString();
+        const stockBefore = item.stock;
+        let stockAfter = stockBefore;
+        const unitPrice = data.unitPrice ?? item.unitPrice;
+
+        switch (data.type) {
+          case '入库':
+            stockAfter = stockBefore + data.quantity;
+            break;
+          case '出库':
+          case '领用':
+            if (stockBefore < data.quantity) {
+              get().addToast('error', `${item.name}库存不足，当前库存：${stockBefore}${item.unit}`);
+              return false;
+            }
+            stockAfter = stockBefore - data.quantity;
+            break;
+          case '退货':
+            stockAfter = stockBefore + data.quantity;
+            break;
+          case '盘点':
+            stockAfter = data.quantity;
+            break;
+        }
+
+        const transaction: StockTransaction = {
+          id: generateId(),
+          inventoryItemId: item.id,
+          inventoryItemName: item.name,
+          category: item.category,
+          type: data.type,
+          quantity: data.type === '盘点' ? Math.abs(stockAfter - stockBefore) : data.quantity,
+          unitPrice,
+          totalPrice: (data.type === '盘点' ? Math.abs(stockAfter - stockBefore) : data.quantity) * unitPrice,
+          stockBefore,
+          stockAfter,
+          operator: data.operator,
+          orderId: data.orderId,
+          orderNo: data.orderNo,
+          remark: data.remark,
+          createdAt: now,
+        };
+
+        const shouldUpdateRestockDate = data.type === '入库';
+
+        set((s) => ({
+          inventoryItems: s.inventoryItems.map((i) =>
+            i.id === item.id
+              ? {
+                  ...i,
+                  stock: stockAfter,
+                  updatedAt: now,
+                  lastRestockDate: shouldUpdateRestockDate ? toDateKey(new Date()) : i.lastRestockDate,
+                  unitPrice: data.type === '入库' && data.unitPrice !== undefined ? data.unitPrice : i.unitPrice,
+                }
+              : i
+          ),
+          stockTransactions: [transaction, ...s.stockTransactions],
+        }));
+
+        const typeLabel: Record<StockTransactionType, string> = {
+          '入库': '入库',
+          '出库': '出库',
+          '领用': '领用',
+          '退货': '退货',
+          '盘点': '盘点',
+        };
+        get().addToast('success', `${item.name}${typeLabel[data.type]}成功`);
+
+        if (data.type !== '入库' && data.type !== '退货' && stockAfter < item.safeStock) {
+          get().addToast(
+            'warning',
+            `${item.name}库存已低于安全库存（当前${stockAfter}${item.unit}，安全库存${item.safeStock}${item.unit}），请及时补货！`
+          );
+        }
+        return true;
+      },
+
+      getLowStockItems: () => {
+        return get().inventoryItems.filter((i) => i.stock < i.safeStock);
+      },
+
+      consumeInventoryForOrder: (orderId, items) => {
+        const order = get().orders.find((o) => o.id === orderId);
+        if (!order) return false;
+
+        let allSuccess = true;
+        for (const { inventoryItemId, quantity, operator } of items) {
+          const result = get().addStockTransaction({
+            inventoryItemId,
+            type: '领用',
+            quantity,
+            operator,
+            orderId,
+            orderNo: order.orderNo,
+            remark: order.description ? `维修领用：${order.description.slice(0, 20)}` : '维修领用',
+          });
+          if (!result) allSuccess = false;
+        }
+        return allSuccess;
+      },
+
       addToast: (type, message) => {
         const id = generateId();
         set((s) => ({ toasts: [...s.toasts, { id, type, message }] }));
@@ -489,6 +751,8 @@ export const useAppStore = create<AppState>()(
           toasts: [],
           inspectionPlans: mockInspectionPlans,
           inspectionTasks: mockInspectionTasks,
+          inventoryItems: mockInventoryItems,
+          stockTransactions: mockStockTransactions,
         });
         localStorage.removeItem('repair-management-storage');
         get().addToast('success', '数据已重置');

@@ -15,6 +15,7 @@ import {
   Wrench,
   ClipboardCheck,
   Smartphone,
+  Package,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
@@ -32,6 +33,7 @@ const menuItems: MenuItem[] = [
   { path: '/orders', label: '报修工单', icon: ClipboardList, roles: ['admin', 'worker', 'owner'] },
   { path: '/workbench', label: '维修工工作台', icon: Wrench, roles: ['worker', 'admin'] },
   { path: '/repair/new', label: '报修登记', icon: Home, roles: ['owner', 'admin'] },
+  { path: '/inventory', label: '耗材库存', icon: Package, roles: ['admin', 'worker'] },
   { path: '/workers', label: '维修工管理', icon: UserCog, roles: ['admin'] },
   { path: '/inspection/plans', label: '巡检计划', icon: ClipboardCheck, roles: ['admin'] },
   { path: '/inspection/tasks', label: '巡检记录', icon: ClipboardList, roles: ['admin', 'inspector'] },
@@ -54,6 +56,7 @@ const breadcrumbMap: Record<string, string> = {
   '/inspection/plans': '巡检计划',
   '/inspection/tasks': '巡检记录',
   '/inspection/mobile': '巡检作业',
+  '/inventory': '耗材库存',
   '/settings': '系统设置',
 };
 

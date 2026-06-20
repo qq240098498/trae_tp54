@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store';
 import { trendData } from '@/data/mockData';
 import {
@@ -12,9 +13,13 @@ import {
   User,
   Phone,
   ChevronRight,
+  Package,
+  Warehouse,
+  AlertCircle,
 } from 'lucide-react';
 import type { RepairOrder, OrderStatus, UrgencyLevel } from '@/types';
 import { URGENCY_WEIGHT } from '@/types';
+import { cn } from '@/lib/utils';
 
 function getUrgencyColor(urgency: UrgencyLevel) {
   switch (urgency) {
@@ -178,7 +183,11 @@ function TrendChart({ data }: { data: { date: string; count: number }[] }) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const orders = useAppStore((s) => s.orders);
+  const inventoryItems = useAppStore((s) => s.inventoryItems);
+  const addStockTransaction = useAppStore((s) => s.addStockTransaction);
+  const currentUser = useAppStore((s) => s.currentUser);
 
   const stats = useMemo(() => {
     const today = new Date();
@@ -192,6 +201,15 @@ export default function Dashboard() {
     };
   }, [orders]);
 
+  const inventoryStats = useMemo(() => {
+    return {
+      totalTypes: inventoryItems.length,
+      totalStock: inventoryItems.reduce((sum, i) => sum + i.stock, 0),
+      totalValue: inventoryItems.reduce((sum, i) => sum + i.stock * i.unitPrice, 0),
+      lowStock: inventoryItems.filter((i) => i.stock < i.safeStock),
+    };
+  }, [inventoryItems]);
+
   const urgentOrders = useMemo(() => {
     return orders
       .filter((o) => URGENCY_WEIGHT[o.urgency] >= 2 && !['已完成', '已取消'].includes(o.status))
@@ -202,6 +220,20 @@ export default function Dashboard() {
   const recentOrders = useMemo(() => {
     return [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8);
   }, [orders]);
+
+  const handleQuickRestock = (itemId: string) => {
+    const item = inventoryItems.find((i) => i.id === itemId);
+    if (!item) return;
+    const restockQty = item.safeStock * 2 - item.stock;
+    const success = addStockTransaction({
+      inventoryItemId: item.id,
+      type: '入库',
+      quantity: restockQty,
+      operator: currentUser.name,
+      remark: 'Dashboard快捷补货',
+    });
+    return success;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -242,44 +274,144 @@ export default function Dashboard() {
           />
         </div>
 
+        {inventoryStats.lowStock.length > 0 && currentUser.role === 'admin' && (
+          <div
+            className="card p-5 mb-6 border-2 border-orange-300 bg-orange-50/50 opacity-0 animate-fade-in-up cursor-pointer hover:shadow-md transition-shadow"
+            style={{ animationDelay: '220ms' }}
+            onClick={() => navigate('/inventory')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-orange-100 shrink-0">
+                <AlertTriangle className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-bold text-orange-800">
+                    库存预警：{inventoryStats.lowStock.length} 种耗材需要补货
+                  </h3>
+                  <ChevronRight className="w-5 h-5 text-orange-400 shrink-0" />
+                </div>
+                <p className="text-sm text-orange-700 mt-1">
+                  以下耗材已低于安全库存，请及时安排采购
+                </p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {inventoryStats.lowStock.slice(0, 5).map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-orange-200"
+                    >
+                      <span className="text-sm font-medium text-gray-800">{item.name}</span>
+                      <span className="text-xs text-orange-600 font-semibold">
+                        {item.stock}/{item.safeStock}{item.unit}
+                      </span>
+                    </div>
+                  ))}
+                  {inventoryStats.lowStock.length > 5 && (
+                    <span className="px-2.5 py-1 text-xs text-gray-500">
+                      等 {inventoryStats.lowStock.length} 种
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="lg:col-span-2 card p-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '250ms' }}>
             <h2 className="text-lg font-semibold text-gray-800 mb-4">近7日报修趋势</h2>
             <TrendChart data={trendData} />
           </div>
 
-          <div className="card p-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">紧急工单提醒</h2>
-              <span className="badge bg-red-100 text-red-700">{urgentOrders.length}</span>
-            </div>
-            <div className="space-y-3">
-              {urgentOrders.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">暂无紧急工单</p>
-              ) : (
-                urgentOrders.map((order, idx) => (
-                  <div
-                    key={order.id}
-                    className="p-3 rounded-lg border-2 border-red-400 bg-red-50 animate-pulse-slow"
-                    style={{ animationDelay: `${idx * 200}ms` }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`badge ${getUrgencyColor(order.urgency)}`}>
-                            {order.urgency}
-                          </span>
-                          <span className={`badge ${getStatusColor(order.status)}`}>
-                            {order.status}
-                          </span>
+          <div className="space-y-6">
+            <div className="card p-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">紧急工单提醒</h2>
+                <span className="badge bg-red-100 text-red-700">{urgentOrders.length}</span>
+              </div>
+              <div className="space-y-3">
+                {urgentOrders.length === 0 ? (
+                  <p className="text-gray-400 text-center py-8">暂无紧急工单</p>
+                ) : (
+                  urgentOrders.map((order, idx) => (
+                    <div
+                      key={order.id}
+                      onClick={() => navigate(`/orders/${order.id}`)}
+                      className="p-3 rounded-lg border-2 border-red-400 bg-red-50 animate-pulse-slow cursor-pointer hover:bg-red-100 transition-colors"
+                      style={{ animationDelay: `${idx * 200}ms` }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`badge ${getUrgencyColor(order.urgency)}`}>
+                              {order.urgency}
+                            </span>
+                            <span className={`badge ${getStatusColor(order.status)}`}>
+                              {order.status}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-800 mt-1 truncate">{order.repairType} - {order.roomNumber}</p>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">{order.description}</p>
                         </div>
-                        <p className="text-sm font-medium text-gray-800 mt-1">{order.repairType} - {order.roomNumber}</p>
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-1">{order.description}</p>
+                        <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
                       </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
                     </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div
+              className="card p-6 opacity-0 animate-fade-in-up cursor-pointer hover:shadow-md transition-all"
+              style={{ animationDelay: '320ms' }}
+              onClick={() => navigate('/inventory')}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Package className="w-5 h-5 text-primary-700" />
+                  <h2 className="text-lg font-semibold text-gray-800">耗材库存概览</h2>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="p-3 rounded-lg bg-primary-50 text-center">
+                  <p className="text-2xl font-bold text-primary-800">{inventoryStats.totalTypes}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">物品种类</p>
+                </div>
+                <div className="p-3 rounded-lg bg-blue-50 text-center">
+                  <p className="text-2xl font-bold text-blue-700">{inventoryStats.totalStock}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">库存总量</p>
+                </div>
+              </div>
+              {inventoryStats.lowStock.length > 0 ? (
+                <div className="p-3 rounded-lg bg-orange-50 border border-orange-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="w-4 h-4 text-orange-600 shrink-0" />
+                    <span className="text-sm font-semibold text-orange-800">
+                      {inventoryStats.lowStock.length} 种需要补货
+                    </span>
                   </div>
-                ))
+                  <div className="space-y-1.5">
+                    {inventoryStats.lowStock.slice(0, 3).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-700 truncate flex-1">{item.name}</span>
+                        <span className={cn(
+                          'font-semibold ml-2 shrink-0',
+                          item.stock <= 0 ? 'text-red-600' : 'text-orange-600'
+                        )}>
+                          {item.stock}/{item.safeStock}{item.unit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                    <span className="text-sm font-medium text-green-800">库存状态良好</span>
+                  </div>
+                </div>
               )}
             </div>
           </div>
