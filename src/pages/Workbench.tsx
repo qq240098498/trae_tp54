@@ -23,6 +23,7 @@ function OrderCard({
   onComplete,
   onViewDetail,
   isUrgent,
+  canAccept,
 }: {
   order: RepairOrder;
   tabKey: TabKey;
@@ -31,6 +32,7 @@ function OrderCard({
   onComplete: (remark: string) => void;
   onViewDetail: () => void;
   isUrgent: boolean;
+  canAccept?: boolean;
 }) {
   const [arriveRemark, setArriveRemark] = useState('');
   const [completeRemark, setCompleteRemark] = useState('');
@@ -146,15 +148,17 @@ function OrderCard({
           <div className="pt-2 border-t border-gray-100">
             <button
               onClick={onAccept}
+              disabled={canAccept === false}
               className={cn(
                 'w-full py-3 rounded-lg font-medium text-white transition-all duration-200 flex items-center justify-center gap-2',
                 isUrgent
                   ? 'bg-red-600 hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98]'
-                  : 'bg-primary-600 hover:bg-primary-700 hover:scale-[1.02] active:scale-[0.98]'
+                  : 'bg-primary-600 hover:bg-primary-700 hover:scale-[1.02] active:scale-[0.98]',
+                canAccept === false && 'opacity-50 cursor-not-allowed hover:scale-100'
               )}
             >
               <PlayCircle className="w-5 h-5" />
-              立即接单
+              {canAccept === false ? '请切换到维修工角色' : '立即接单'}
             </button>
           </div>
         )}
@@ -260,12 +264,13 @@ function OrderCard({
 }
 
 export default function Workbench() {
-  const { orders, currentUser, acceptOrder, updateOrderStatus } = useAppStore();
+  const { orders, currentUser, acceptOrder, updateOrderStatus, addToast } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<RepairOrder | null>(null);
 
   const workerId = currentUser.workerId;
+  const canAccept = !!workerId;
 
   const tabOrders = useMemo(() => {
     const result: Record<TabKey, RepairOrder[]> = {
@@ -306,7 +311,10 @@ export default function Workbench() {
   }, [orders, workerId]);
 
   const handleAccept = (order: RepairOrder) => {
-    if (!workerId) return;
+    if (!workerId) {
+      addToast('warning', '请切换到维修工角色后再进行接单操作');
+      return;
+    }
     acceptOrder(order.id, currentUser.name, workerId);
   };
 
@@ -398,6 +406,7 @@ export default function Workbench() {
                       onComplete={(remark) => handleComplete(order, remark)}
                       onViewDetail={() => handleViewDetail(order)}
                       isUrgent={isUrgent}
+                      canAccept={canAccept}
                     />
                   );
                 })}
