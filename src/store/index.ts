@@ -760,6 +760,28 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'repair-management-storage',
+      migrate: (persistedState: any, version) => {
+        if (!persistedState) {
+          return {
+            orders: mockOrders,
+            workers: mockWorkers,
+            users: mockUsers,
+            currentUser: mockUsers[0],
+            toasts: [],
+            inspectionPlans: mockInspectionPlans,
+            inspectionTasks: mockInspectionTasks,
+            inventoryItems: mockInventoryItems,
+            stockTransactions: mockStockTransactions,
+          };
+        }
+        return {
+          ...persistedState,
+          inventoryItems: persistedState.inventoryItems && persistedState.inventoryItems.length > 0
+            ? persistedState.inventoryItems
+            : mockInventoryItems,
+          stockTransactions: persistedState.stockTransactions || mockStockTransactions,
+        };
+      },
     }
   )
 );

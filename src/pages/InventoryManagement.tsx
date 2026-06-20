@@ -497,8 +497,11 @@ export default function InventoryManagement() {
                                 <p className="font-medium text-gray-900 truncate" title={item.name}>
                                   {item.name}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-0.5 truncate" title={`${item.spec}${item.supplier ? ' · ' + item.supplier : ''}`}>
-                                  {item.spec}
+                                <p
+                                  className="text-xs text-gray-500 mt-0.5 truncate"
+                                  title={`${item.spec || ''}${item.supplier ? ' · ' + item.supplier : ''}`}
+                                >
+                                  {item.spec || '-'}
                                   {item.supplier && ` · ${item.supplier}`}
                                 </p>
                               </div>
@@ -661,7 +664,7 @@ export default function InventoryManagement() {
                               <p className="font-medium text-gray-900 truncate" title={tx.inventoryItemName}>
                                 {tx.inventoryItemName}
                               </p>
-                              <p className="text-xs text-gray-500 truncate">{tx.category}</p>
+                              <p className="text-xs text-gray-500 truncate">{tx.category || '-'}</p>
                             </div>
                           </td>
                           <td className="px-4 py-4">

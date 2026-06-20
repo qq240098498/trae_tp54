@@ -108,11 +108,13 @@ export function escalateUrgency(urgency: UrgencyLevel): UrgencyLevel {
   return '非常紧急';
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined || isNaN(amount)) return '¥0.00';
   return `¥${amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function formatNumber(num: number): string {
+export function formatNumber(num: number | null | undefined): string {
+  if (num === null || num === undefined || isNaN(num)) return '0';
   return num.toLocaleString('zh-CN');
 }
 
