@@ -13,6 +13,8 @@ import {
   LogOut,
   Home,
   Wrench,
+  ClipboardCheck,
+  Smartphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
@@ -26,17 +28,21 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { path: '/', label: '工作台', icon: LayoutDashboard, roles: ['admin', 'worker', 'owner'] },
+  { path: '/', label: '工作台', icon: LayoutDashboard, roles: ['admin', 'worker', 'owner', 'inspector'] },
   { path: '/orders', label: '报修工单', icon: ClipboardList, roles: ['admin', 'worker', 'owner'] },
   { path: '/workbench', label: '维修工工作台', icon: Wrench, roles: ['worker', 'admin'] },
   { path: '/repair/new', label: '报修登记', icon: Home, roles: ['owner', 'admin'] },
   { path: '/workers', label: '维修工管理', icon: UserCog, roles: ['admin'] },
+  { path: '/inspection/plans', label: '巡检计划', icon: ClipboardCheck, roles: ['admin'] },
+  { path: '/inspection/tasks', label: '巡检记录', icon: ClipboardList, roles: ['admin', 'inspector'] },
+  { path: '/inspection/mobile', label: '巡检作业', icon: Smartphone, roles: ['inspector'] },
 ];
 
 const roleLabels: Record<UserRole, string> = {
   admin: '物业管理员',
   worker: '维修工人',
   owner: '小区业主',
+  inspector: '公区巡检员',
 };
 
 const breadcrumbMap: Record<string, string> = {
@@ -45,6 +51,9 @@ const breadcrumbMap: Record<string, string> = {
   '/workbench': '维修工工作台',
   '/repair/new': '报修登记',
   '/workers': '维修工管理',
+  '/inspection/plans': '巡检计划',
+  '/inspection/tasks': '巡检记录',
+  '/inspection/mobile': '巡检作业',
   '/settings': '系统设置',
 };
 

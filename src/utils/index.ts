@@ -1,4 +1,4 @@
-import { UrgencyLevel, OrderStatus, URGENCY_WEIGHT, ESCALATION_THRESHOLD_MS } from '@/types';
+import { UrgencyLevel, OrderStatus, URGENCY_WEIGHT, ESCALATION_THRESHOLD_MS, InspectionPlan, InspectionCycle } from '@/types';
 
 export function generateOrderNo(): string {
   const now = new Date();
@@ -110,4 +110,69 @@ export function escalateUrgency(urgency: UrgencyLevel): UrgencyLevel {
 
 export function formatCurrency(amount: number): string {
   return `¥${amount.toFixed(2)}`;
+}
+
+export function generateInspectionTaskNo(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const rand = String(Math.floor(Math.random() * 9000) + 1000);
+  return `XJ${y}${m}${d}${rand}`;
+}
+
+export function toDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function todayKey(): string {
+  return toDateKey(new Date());
+}
+
+export function getWeekKey(date: Date): string {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+export function getMonthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function parseDateKey(key: string): Date {
+  return new Date(key + 'T00:00:00');
+}
+
+export function isInspectionDue(plan: InspectionPlan, now: Date = new Date()): boolean {
+  if (!plan.enabled) return false;
+  const last = plan.lastGeneratedDate;
+  switch (plan.cycle) {
+    case 'daily':
+      return last !== toDateKey(now);
+    case 'weekly':
+      return !last || getWeekKey(parseDateKey(last)) !== getWeekKey(now);
+    case 'monthly':
+      return !last || getMonthKey(parseDateKey(last)) !== getMonthKey(now);
+    default:
+      return false;
+  }
+}
+
+export function getCycleLabel(cycle: InspectionCycle): string {
+  switch (cycle) {
+    case 'daily':
+      return '每日';
+    case 'weekly':
+      return '每周';
+    case 'monthly':
+      return '每月';
+    default:
+      return '';
+  }
 }

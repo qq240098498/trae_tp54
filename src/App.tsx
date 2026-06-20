@@ -8,10 +8,14 @@ import RepairForm from '@/pages/RepairForm';
 import OrderList from '@/pages/OrderList';
 import OrderDetail from '@/pages/OrderDetail';
 import Workbench from '@/pages/Workbench';
+import InspectionPlans from '@/pages/InspectionPlans';
+import InspectionTasks from '@/pages/InspectionTasks';
+import InspectionMobile from '@/pages/InspectionMobile';
 import { useAppStore } from '@/store';
 
 export default function App() {
   const checkAndEscalateOrders = useAppStore((s) => s.checkAndEscalateOrders);
+  const generateDueInspectionTasks = useAppStore((s) => s.generateDueInspectionTasks);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -19,6 +23,10 @@ export default function App() {
     }, 30 * 1000);
     return () => clearInterval(interval);
   }, [checkAndEscalateOrders]);
+
+  useEffect(() => {
+    generateDueInspectionTasks();
+  }, [generateDueInspectionTasks]);
 
   return (
     <Router>
@@ -34,6 +42,10 @@ export default function App() {
           <Route path="repair/new" element={<RepairForm />} />
           <Route path="repair" element={<Navigate to="/repair/new" replace />} />
           <Route path="workers" element={<WorkerManagement />} />
+          <Route path="inspection/plans" element={<InspectionPlans />} />
+          <Route path="inspection/tasks" element={<InspectionTasks />} />
+          <Route path="inspection/mobile" element={<InspectionMobile />} />
+          <Route path="inspection" element={<Navigate to="/inspection/tasks" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -1,8 +1,11 @@
-import { RepairOrder, Worker, User } from '@/types';
+import { RepairOrder, Worker, User, InspectionPlan, InspectionTask, InspectionCategory, DEFAULT_INSPECTION_ITEMS } from '@/types';
+import { toDateKey } from '@/utils';
 
 const now = new Date();
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 60 * 60 * 1000).toISOString();
 const minutesAgo = (m: number) => new Date(now.getTime() - m * 60 * 1000).toISOString();
+const todayStr = toDateKey(now);
+const yesterdayStr = toDateKey(new Date(now.getTime() - 24 * 60 * 60 * 1000));
 
 export const mockWorkers: Worker[] = [
   {
@@ -325,12 +328,33 @@ export const mockOrders: RepairOrder[] = [
     updatedAt: minutesAgo(18),
     autoEscalated: false,
   },
+  {
+    id: 'o13',
+    orderNo: 'WX20260619013',
+    roomNumber: '2栋消防通道',
+    ownerName: '巡检员老周',
+    ownerPhone: '13800138020',
+    repairType: '其他',
+    urgency: '紧急',
+    description: '[公区巡检异常] 消防 - 疏散指示灯亮：3栋2层疏散指示灯不亮，需更换',
+    status: '待派单',
+    materials: [],
+    timeline: [
+      { status: '待派单', timestamp: hoursAgo(20), operator: '巡检系统', remark: '由公区巡检任务自动转入' },
+    ],
+    createdAt: hoursAgo(20),
+    updatedAt: hoursAgo(20),
+    autoEscalated: false,
+    sourceFromInspection: true,
+    inspectionTaskId: 'it3',
+  },
 ];
 
 export const mockUsers: User[] = [
   { id: 'u1', role: 'admin', name: '物业管理员' },
   { id: 'u2', role: 'worker', name: '张师傅', workerId: 'w1' },
   { id: 'u3', role: 'owner', name: '业主王先生', roomNumber: '3栋1单元501' },
+  { id: 'u4', role: 'inspector', name: '巡检员老周' },
 ];
 
 export const trendData = [
@@ -341,4 +365,139 @@ export const trendData = [
   { date: '06-18', count: 9 },
   { date: '06-19', count: 7 },
   { date: '06-20', count: 8 },
+];
+
+function buildItems(category: InspectionCategory, prefix: string): InspectionPlan['items'] {
+  return DEFAULT_INSPECTION_ITEMS[category].map((name, i) => ({
+    id: `${prefix}-i${i + 1}`,
+    name,
+  }));
+}
+
+export const mockInspectionPlans: InspectionPlan[] = [
+  {
+    id: 'p1',
+    name: '客梯每日巡检',
+    category: '电梯',
+    cycle: 'daily',
+    area: '1栋-3栋客梯',
+    items: buildItems('电梯', 'p1'),
+    enabled: true,
+    lastGeneratedDate: todayStr,
+    createdAt: hoursAgo(120),
+  },
+  {
+    id: 'p2',
+    name: '消防设施每周巡检',
+    category: '消防',
+    cycle: 'weekly',
+    area: '全小区消防设施',
+    items: buildItems('消防', 'p2'),
+    enabled: true,
+    lastGeneratedDate: yesterdayStr,
+    createdAt: hoursAgo(240),
+  },
+  {
+    id: 'p3',
+    name: '园林绿化每月巡检',
+    category: '绿化',
+    cycle: 'monthly',
+    area: '中心花园及主干道绿化',
+    items: buildItems('绿化', 'p3'),
+    enabled: true,
+    lastGeneratedDate: undefined,
+    createdAt: hoursAgo(500),
+  },
+  {
+    id: 'p4',
+    name: '公区照明每日巡检',
+    category: '照明',
+    cycle: 'daily',
+    area: '地下车库与楼道照明',
+    items: buildItems('照明', 'p4'),
+    enabled: true,
+    lastGeneratedDate: todayStr,
+    createdAt: hoursAgo(120),
+  },
+  {
+    id: 'p5',
+    name: '门禁系统每周巡检',
+    category: '门禁',
+    cycle: 'weekly',
+    area: '各单元门禁系统',
+    items: buildItems('门禁', 'p5'),
+    enabled: false,
+    lastGeneratedDate: undefined,
+    createdAt: hoursAgo(200),
+  },
+];
+
+function taskItems(category: InspectionCategory, prefix: string): InspectionTask['items'] {
+  return buildItems(category, prefix).map((t) => ({ ...t, result: 'pending' as const }));
+}
+
+export const mockInspectionTasks: InspectionTask[] = [
+  {
+    id: 'it1',
+    taskNo: 'XJ20260620001',
+    planId: 'p1',
+    planName: '客梯每日巡检',
+    category: '电梯',
+    cycle: 'daily',
+    area: '1栋-3栋客梯',
+    items: taskItems('电梯', 'it1'),
+    status: 'pending',
+    scheduledDate: todayStr,
+    createdAt: hoursAgo(6),
+    convertedOrderIds: [],
+  },
+  {
+    id: 'it2',
+    taskNo: 'XJ20260620002',
+    planId: 'p4',
+    planName: '公区照明每日巡检',
+    category: '照明',
+    cycle: 'daily',
+    area: '地下车库与楼道照明',
+    items: [
+      { id: 'it2-i1', name: '楼道照明正常', result: 'normal' },
+      { id: 'it2-i2', name: '地下车库灯亮', result: 'normal' },
+      { id: 'it2-i3', name: '景观灯完好', result: 'abnormal', remark: '2栋一层景观灯不亮' },
+      { id: 'it2-i4', name: '应急照明可用', result: 'pending' },
+      { id: 'it2-i5', name: '开关无损坏', result: 'pending' },
+    ],
+    status: 'in_progress',
+    assigneeId: 'u4',
+    assigneeName: '巡检员老周',
+    scheduledDate: todayStr,
+    startedAt: hoursAgo(1),
+    createdAt: hoursAgo(6),
+    convertedOrderIds: [],
+  },
+  {
+    id: 'it3',
+    taskNo: 'XJ20260619003',
+    planId: 'p2',
+    planName: '消防设施每周巡检',
+    category: '消防',
+    cycle: 'weekly',
+    area: '全小区消防设施',
+    items: [
+      { id: 'it3-i1', name: '灭火器压力正常', result: 'normal' },
+      { id: 'it3-i2', name: '消防栓水带完好', result: 'normal' },
+      { id: 'it3-i3', name: '疏散指示灯亮', result: 'abnormal', remark: '3栋2层疏散指示灯不亮' },
+      { id: 'it3-i4', name: '通道无杂物堆放', result: 'normal' },
+      { id: 'it3-i5', name: '报警按钮完好', result: 'normal' },
+    ],
+    status: 'completed',
+    assigneeId: 'u4',
+    assigneeName: '巡检员老周',
+    scheduledDate: yesterdayStr,
+    startedAt: hoursAgo(26),
+    completedAt: hoursAgo(20),
+    operator: '巡检员老周',
+    remark: '完成消防周巡检，1项异常已转报修',
+    createdAt: hoursAgo(28),
+    convertedOrderIds: ['o13'],
+  },
 ];
