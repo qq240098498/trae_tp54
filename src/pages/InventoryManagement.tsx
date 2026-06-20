@@ -433,31 +433,41 @@ export default function InventoryManagement() {
 
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[900px] table-fixed">
+                  <colgroup>
+                    <col className="w-[22%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[13%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[10%]" />
+                  </colgroup>
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         物品信息
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         分类
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         当前库存
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         安全库存
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         状态
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         单价
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         库存价值
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         操作
                       </th>
                     </tr>
@@ -482,24 +492,26 @@ export default function InventoryManagement() {
                               isLow && 'bg-orange-50/30'
                             )}
                           >
-                            <td className="px-6 py-4">
-                              <div>
-                                <p className="font-medium text-gray-900">{item.name}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
+                            <td className="px-4 py-4">
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 truncate" title={item.name}>
+                                  {item.name}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5 truncate" title={`${item.spec}${item.supplier ? ' · ' + item.supplier : ''}`}>
                                   {item.spec}
                                   {item.supplier && ` · ${item.supplier}`}
                                 </p>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
-                              <span className="badge bg-primary-50 text-primary-700">
+                            <td className="px-4 py-4">
+                              <span className="badge bg-primary-50 text-primary-700 whitespace-nowrap">
                                 {item.category}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="px-4 py-4 text-right">
                               <span
                                 className={cn(
-                                  'font-semibold tabular-nums',
+                                  'font-semibold tabular-nums whitespace-nowrap',
                                   item.stock === 0
                                     ? 'text-red-600'
                                     : isLow
@@ -513,28 +525,28 @@ export default function InventoryManagement() {
                                 </span>
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-right text-gray-600 tabular-nums">
+                            <td className="px-4 py-4 text-right text-gray-600 tabular-nums whitespace-nowrap">
                               {formatNumber(item.safeStock)}
                               <span className="text-xs text-gray-400 ml-0.5">{item.unit}</span>
                             </td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="px-4 py-4 text-right">
                               <span
                                 className={cn(
-                                  'badge border',
+                                  'badge border whitespace-nowrap',
                                   status.color
                                 )}
                               >
                                 {status.label}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-right text-gray-700">
+                            <td className="px-4 py-4 text-right text-gray-700 tabular-nums whitespace-nowrap">
                               {formatCurrency(item.unitPrice)}
                             </td>
-                            <td className="px-6 py-4 text-right font-medium text-gray-900">
+                            <td className="px-4 py-4 text-right font-medium text-gray-900 tabular-nums whitespace-nowrap">
                               {formatCurrency(item.stock * item.unitPrice)}
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center justify-center gap-1">
+                            <td className="px-4 py-4">
+                              <div className="flex items-center justify-center gap-0.5">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -587,34 +599,45 @@ export default function InventoryManagement() {
         {activeTab === 'transactions' && (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[1100px] table-fixed">
+                <colgroup>
+                  <col className="w-[14%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[14%]" />
+                </colgroup>
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       时间
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       物品
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       类型
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       数量
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       单价
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       金额
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       库存变化
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       操作人
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       关联工单/备注
                     </th>
                   </tr>
@@ -630,21 +653,21 @@ export default function InventoryManagement() {
                   ) : (
                       stockTransactions.map((tx) => (
                         <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 tabular-nums">
                             {formatDateTime(tx.createdAt)}
                           </td>
-                          <td className="px-6 py-4">
-                            <div>
-                              <p className="font-medium text-gray-900">
+                          <td className="px-4 py-4">
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate" title={tx.inventoryItemName}>
                                 {tx.inventoryItemName}
                               </p>
-                              <p className="text-xs text-gray-500">{tx.category}</p>
+                              <p className="text-xs text-gray-500 truncate">{tx.category}</p>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-4">
                             <span
                               className={cn(
-                                'badge',
+                                'badge whitespace-nowrap',
                                 getTransactionTypeColor(tx.type)
                               )}
                             >
@@ -653,7 +676,7 @@ export default function InventoryManagement() {
                           </td>
                           <td
                             className={cn(
-                              'px-6 py-4 text-right font-semibold tabular-nums',
+                              'px-4 py-4 text-right font-semibold tabular-nums whitespace-nowrap',
                               tx.type === '入库' || tx.type === '退货'
                                 ? 'text-green-700'
                                 : 'text-red-700'
@@ -662,33 +685,37 @@ export default function InventoryManagement() {
                             {tx.type === '入库' || tx.type === '退货' ? '+' : '-'}
                             {formatNumber(tx.quantity)}
                           </td>
-                          <td className="px-6 py-4 text-right text-gray-600 tabular-nums">
+                          <td className="px-4 py-4 text-right text-gray-600 tabular-nums whitespace-nowrap">
                             {formatCurrency(tx.unitPrice)}
                           </td>
-                          <td className="px-6 py-4 text-right font-medium text-gray-900 tabular-nums">
+                          <td className="px-4 py-4 text-right font-medium text-gray-900 tabular-nums whitespace-nowrap">
                             {formatCurrency(tx.totalPrice)}
                           </td>
-                          <td className="px-6 py-4 text-right text-sm text-gray-600 tabular-nums">
+                          <td className="px-4 py-4 text-right text-sm text-gray-600 tabular-nums whitespace-nowrap">
                             {formatNumber(tx.stockBefore)} →{' '}
                             <span className="font-semibold text-primary-700">
                               {formatNumber(tx.stockAfter)}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-700">{tx.operator}</td>
-                          <td className="px-6 py-4">
-                            {tx.orderNo && (
-                              <p className="text-xs font-medium text-primary-700">
-                                工单：{tx.orderNo}
-                              </p>
-                            )}
-                            {tx.remark && (
-                              <p className="text-xs text-gray-500 mt-0.5">
-                                {tx.remark}
-                              </p>
-                            )}
-                            {!tx.orderNo && !tx.remark && (
-                              <span className="text-xs text-gray-400">-</span>
-                            )}
+                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap truncate">
+                            {tx.operator}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="min-w-0">
+                              {tx.orderNo && (
+                                <p className="text-xs font-medium text-primary-700 truncate" title={`工单：${tx.orderNo}`}>
+                                  工单：{tx.orderNo}
+                                </p>
+                              )}
+                              {tx.remark && (
+                                <p className="text-xs text-gray-500 mt-0.5 truncate" title={tx.remark}>
+                                  {tx.remark}
+                                </p>
+                              )}
+                              {!tx.orderNo && !tx.remark && (
+                                <span className="text-xs text-gray-400">-</span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))
