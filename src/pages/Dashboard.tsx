@@ -16,6 +16,8 @@ import {
   Package,
   Warehouse,
   AlertCircle,
+  Star,
+  ThumbsDown,
 } from 'lucide-react';
 import type { RepairOrder, OrderStatus, UrgencyLevel } from '@/types';
 import { URGENCY_WEIGHT } from '@/types';
@@ -188,6 +190,7 @@ export default function Dashboard() {
   const inventoryItems = useAppStore((s) => s.inventoryItems);
   const addStockTransaction = useAppStore((s) => s.addStockTransaction);
   const currentUser = useAppStore((s) => s.currentUser);
+  const complaintTodos = useAppStore((s) => s.complaintTodos);
 
   const stats = useMemo(() => {
     const today = new Date();
@@ -209,6 +212,14 @@ export default function Dashboard() {
       lowStock: inventoryItems.filter((i) => i.stock < i.safeStock),
     };
   }, [inventoryItems]);
+
+  const complaintStats = useMemo(() => {
+    return {
+      total: complaintTodos.length,
+      pending: complaintTodos.filter((c) => c.status === '待处理').length,
+      inProgress: complaintTodos.filter((c) => c.status === '处理中').length,
+    };
+  }, [complaintTodos]);
 
   const urgentOrders = useMemo(() => {
     return orders
@@ -312,6 +323,69 @@ export default function Dashboard() {
                     </span>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {complaintStats.pending > 0 && currentUser.role === 'admin' && (
+          <div
+            className="card p-5 mb-6 border-2 border-red-300 bg-red-50/50 opacity-0 animate-fade-in-up cursor-pointer hover:shadow-md transition-shadow"
+            style={{ animationDelay: '230ms' }}
+            onClick={() => navigate('/orders?tab=completed')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-red-100 shrink-0">
+                <ThumbsDown className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-bold text-red-800">
+                    客诉待办：{complaintStats.pending} 条待处理
+                  </h3>
+                  <ChevronRight className="w-5 h-5 text-red-400 shrink-0" />
+                </div>
+                <p className="text-sm text-red-700 mt-1">
+                  以下低满意度工单需要跟进处理
+                </p>
+                <div className="space-y-2 mt-3">
+                  {complaintTodos
+                    .filter((c) => c.status === '待处理')
+                    .slice(0, 3)
+                    .map((complaint) => (
+                      <div
+                        key={complaint.id}
+                        className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-red-200"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={cn(
+                                  'w-3.5 h-3.5',
+                                  star <= complaint.rating
+                                    ? 'fill-red-500 text-red-500'
+                                    : 'text-gray-300'
+                                )}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm font-medium text-gray-800 truncate">
+                            {complaint.roomNumber} - {complaint.repairType}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500 shrink-0 ml-2">
+                          {complaint.orderNo}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+                {complaintStats.pending > 3 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                  等 {complaintStats.pending} 条待处理客诉
+                </p>
+                )}
               </div>
             </div>
           </div>

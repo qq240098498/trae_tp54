@@ -54,6 +54,9 @@ export interface RepairOrder {
   lastEscalationTime?: string;
   sourceFromInspection?: boolean;
   inspectionTaskId?: string;
+  satisfactionRating?: SatisfactionRating;
+  satisfactionComment?: string;
+  satisfactionSubmittedAt?: string;
 }
 
 export interface Worker {
@@ -209,3 +212,46 @@ export interface StockTransaction {
 export const MATERIAL_CATEGORIES: MaterialCategory[] = ['灯泡', '水龙头', '开关', '阀门', '管件'];
 
 export const STOCK_TRANSACTION_TYPES: StockTransactionType[] = ['入库', '出库', '领用', '退货', '盘点'];
+
+export type SatisfactionRating = 1 | 2 | 3 | 4 | 5;
+
+export interface SatisfactionSurvey {
+  id: string;
+  orderId: string;
+  orderNo: string;
+  rating: SatisfactionRating;
+  comment?: string;
+  submittedAt: string;
+  submitter: string;
+}
+
+export type ComplaintStatus = '待处理' | '处理中' | '已解决' | '已关闭';
+
+export interface ComplaintTodo {
+  id: string;
+  orderId: string;
+  orderNo: string;
+  roomNumber: string;
+  ownerName: string;
+  ownerPhone: string;
+  repairType: RepairType;
+  rating: SatisfactionRating;
+  comment?: string;
+  status: ComplaintStatus;
+  assigneeId?: string;
+  assigneeName?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  resolution?: string;
+}
+
+export const COMPLAINT_STATUSES: ComplaintStatus[] = ['待处理', '处理中', '已解决', '已关闭'];
+
+export const SATISFACTION_RATING_LABELS: Record<SatisfactionRating, string> = {
+  1: '非常不满意',
+  2: '不满意',
+  3: '一般',
+  4: '满意',
+  5: '非常满意',
+};

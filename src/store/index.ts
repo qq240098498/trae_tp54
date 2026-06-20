@@ -21,8 +21,11 @@ import {
   StockTransaction,
   StockTransactionType,
   MaterialCategory,
+  SatisfactionRating,
+  ComplaintTodo,
+  ComplaintStatus,
 } from '@/types';
-import { mockOrders, mockWorkers, mockUsers, mockInspectionPlans, mockInspectionTasks, mockInventoryItems, mockStockTransactions } from '@/data/mockData';
+import { mockOrders, mockWorkers, mockUsers, mockInspectionPlans, mockInspectionTasks, mockInventoryItems, mockStockTransactions, mockComplaintTodos } from '@/data/mockData';
 import {
   generateOrderNo,
   generateId,
@@ -43,6 +46,7 @@ interface AppState {
   inspectionTasks: InspectionTask[];
   inventoryItems: InventoryItem[];
   stockTransactions: StockTransaction[];
+  complaintTodos: ComplaintTodo[];
 
   setCurrentUser: (userId: string) => void;
   switchRole: (role: UserRole) => void;
@@ -130,6 +134,12 @@ interface AppState {
   addToast: (type: ToastMessage['type'], message: string) => void;
   removeToast: (id: string) => void;
 
+  submitSatisfaction: (orderId: string, rating: SatisfactionRating, comment: string, submitter: string) => void;
+
+  updateComplaintStatus: (complaintId: string, status: ComplaintStatus, operator: string, resolution?: string) => void;
+  assignComplaint: (complaintId: string, assigneeId: string, assigneeName: string, operator: string) => void;
+  getPendingComplaints: () => ComplaintTodo[];
+
   resetData: () => void;
 }
 
@@ -145,6 +155,7 @@ export const useAppStore = create<AppState>()(
       inspectionTasks: mockInspectionTasks,
       inventoryItems: mockInventoryItems,
       stockTransactions: mockStockTransactions,
+      complaintTodos: mockComplaintTodos,
 
       setCurrentUser: (userId) => {
         const user = get().users.find((u) => u.id === userId);
@@ -742,6 +753,88 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
       },
 
+      submitSatisfaction: (orderId, rating, comment, submitter) => {
+        const now = new Date().toISOString();
+        const order = get().orders.find((o) => o.id === orderId);
+        if (!order) return;
+
+        set((s) => ({
+          orders: s.orders.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  satisfactionRating: rating,
+                  satisfactionComment: comment || undefined,
+                  satisfactionSubmittedAt: now,
+                }
+              : o
+          ),
+        }));
+
+        if (rating <= 3) {
+          const complaint: ComplaintTodo = {
+            id: generateId(),
+            orderId: order.id,
+            orderNo: order.orderNo,
+            roomNumber: order.roomNumber,
+            ownerName: order.ownerName,
+            ownerPhone: order.ownerPhone,
+            repairType: order.repairType,
+            rating,
+            comment: comment || undefined,
+            status: '待处理',
+            createdAt: now,
+            updatedAt: now,
+          };
+          set((s) => ({
+            complaintTodos: [complaint, ...s.complaintTodos],
+          }));
+          get().addToast('warning', `评价为${rating}星，已自动生成客诉待办`);
+        } else {
+          get().addToast('success', '感谢您的评价！');
+        }
+      },
+
+      updateComplaintStatus: (complaintId, status, operator, resolution) => {
+        const now = new Date().toISOString();
+        set((s) => ({
+          complaintTodos: s.complaintTodos.map((c) =>
+            c.id === complaintId
+              ? {
+                  ...c,
+                  status,
+                  updatedAt: now,
+                  resolvedAt: status === '已解决' ? now : c.resolvedAt,
+                  resolution: resolution || c.resolution,
+                }
+              : c
+          ),
+        }));
+        get().addToast('success', `客诉状态已更新为：${status}`);
+      },
+
+      assignComplaint: (complaintId, assigneeId, assigneeName, operator) => {
+        const now = new Date().toISOString();
+        set((s) => ({
+          complaintTodos: s.complaintTodos.map((c) =>
+            c.id === complaintId
+              ? {
+                  ...c,
+                  assigneeId,
+                  assigneeName,
+                  status: '处理中',
+                  updatedAt: now,
+                }
+              : c
+          ),
+        }));
+        get().addToast('success', `已分配给 ${assigneeName} 处理`);
+      },
+
+      getPendingComplaints: () => {
+        return get().complaintTodos.filter((c) => c.status === '待处理' || c.status === '处理中');
+      },
+
       resetData: () => {
         set({
           orders: mockOrders,
@@ -753,6 +846,7 @@ export const useAppStore = create<AppState>()(
           inspectionTasks: mockInspectionTasks,
           inventoryItems: mockInventoryItems,
           stockTransactions: mockStockTransactions,
+          complaintTodos: mockComplaintTodos,
         });
         localStorage.removeItem('repair-management-storage');
         get().addToast('success', '数据已重置');
@@ -772,6 +866,7 @@ export const useAppStore = create<AppState>()(
             inspectionTasks: mockInspectionTasks,
             inventoryItems: mockInventoryItems,
             stockTransactions: mockStockTransactions,
+            complaintTodos: mockComplaintTodos,
           };
         }
         return {
@@ -780,6 +875,7 @@ export const useAppStore = create<AppState>()(
             ? persistedState.inventoryItems
             : mockInventoryItems,
           stockTransactions: persistedState.stockTransactions || mockStockTransactions,
+          complaintTodos: persistedState.complaintTodos || mockComplaintTodos,
         };
       },
     }

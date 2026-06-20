@@ -1,4 +1,4 @@
-import { RepairOrder, Worker, User, InspectionPlan, InspectionTask, InspectionCategory, DEFAULT_INSPECTION_ITEMS, InventoryItem, StockTransaction } from '@/types';
+import { RepairOrder, Worker, User, InspectionPlan, InspectionTask, InspectionCategory, DEFAULT_INSPECTION_ITEMS, InventoryItem, StockTransaction, ComplaintTodo } from '@/types';
 import { toDateKey } from '@/utils';
 
 const now = new Date();
@@ -191,6 +191,9 @@ export const mockOrders: RepairOrder[] = [
     updatedAt: hoursAgo(43),
     autoEscalated: false,
     signature: 'demo_signature',
+    satisfactionRating: 3,
+    satisfactionComment: '维修后灯具还是偶尔闪烁，问题没有彻底解决',
+    satisfactionSubmittedAt: hoursAgo(42),
   },
   {
     id: 'o7',
@@ -216,6 +219,9 @@ export const mockOrders: RepairOrder[] = [
     createdAt: hoursAgo(50),
     updatedAt: hoursAgo(46),
     autoEscalated: false,
+    satisfactionRating: 4,
+    satisfactionComment: '整体服务还不错，就是响应稍微慢了一点',
+    satisfactionSubmittedAt: hoursAgo(45),
   },
   {
     id: 'o8',
@@ -282,6 +288,9 @@ export const mockOrders: RepairOrder[] = [
     createdAt: hoursAgo(72),
     updatedAt: hoursAgo(67),
     autoEscalated: false,
+    satisfactionRating: 2,
+    satisfactionComment: '修完第二天又堵了，师傅技术不行，态度也一般，很不满意',
+    satisfactionSubmittedAt: hoursAgo(66),
   },
   {
     id: 'o11',
@@ -831,5 +840,38 @@ export const mockStockTransactions: StockTransaction[] = [
     orderNo: 'WX20260620011',
     remark: '卫生间水管维修',
     createdAt: hoursAgo(20),
+  },
+];
+
+export const mockComplaintTodos: ComplaintTodo[] = [
+  {
+    id: 'c1',
+    orderId: 'o10',
+    orderNo: 'WX20260618010',
+    roomNumber: '5栋1单元105',
+    ownerName: '业主J',
+    ownerPhone: '13900139010',
+    repairType: '管道疏通',
+    rating: 2,
+    comment: '修完第二天又堵了，师傅技术不行，态度也一般，很不满意',
+    status: '待处理',
+    createdAt: hoursAgo(65),
+    updatedAt: hoursAgo(65),
+  },
+  {
+    id: 'c2',
+    orderId: 'o6',
+    orderNo: 'WX20260619006',
+    roomNumber: '6栋2单元401',
+    ownerName: '业主F',
+    ownerPhone: '13900139006',
+    repairType: '水电',
+    rating: 3,
+    comment: '维修后灯具还是偶尔闪烁，问题没有彻底解决',
+    status: '处理中',
+    assigneeId: 'w1',
+    assigneeName: '张师傅',
+    createdAt: hoursAgo(30),
+    updatedAt: hoursAgo(25),
   },
 ];
