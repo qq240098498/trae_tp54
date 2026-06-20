@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ClipboardList,
   Eye,
@@ -10,6 +11,8 @@ import {
   MapPin,
   AlertTriangle,
   CheckCircle2,
+  PlayCircle,
+  ArrowRight,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import {
@@ -49,6 +52,7 @@ const STATUS_BADGE: Record<InspectionTaskStatus, string> = {
 
 export default function InspectionTasks() {
   const inspectionTasks = useAppStore((s) => s.inspectionTasks);
+  const navigate = useNavigate();
 
   const [statusFilter, setStatusFilter] = useState<InspectionTaskStatus | ''>('');
   const [categoryFilter, setCategoryFilter] = useState<InspectionCategory | ''>('');
@@ -237,13 +241,33 @@ export default function InspectionTasks() {
                           )}
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <button
-                            onClick={() => handleViewDetail(task)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            详情
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            {task.status === 'pending' && (
+                              <button
+                                onClick={() => navigate(`/inspection/mobile?task=${task.id}`)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+                              >
+                                <PlayCircle className="w-3.5 h-3.5" />
+                                开始巡检
+                              </button>
+                            )}
+                            {task.status === 'in_progress' && (
+                              <button
+                                onClick={() => navigate(`/inspection/mobile?task=${task.id}`)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+                              >
+                                <ArrowRight className="w-3.5 h-3.5" />
+                                继续巡检
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleViewDetail(task)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              详情
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

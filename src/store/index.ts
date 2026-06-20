@@ -405,7 +405,7 @@ export const useAppStore = create<AppState>()(
 
       submitInspectionTask: (taskId, operator, remark) => {
         const task = get().inspectionTasks.find((t) => t.id === taskId);
-        if (!task) return [];
+        if (!task || task.status === 'completed') return [];
         const now = new Date().toISOString();
         const abnormalItems = task.items.filter((it) => it.result === 'abnormal');
 

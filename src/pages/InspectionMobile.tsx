@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -47,8 +48,27 @@ export default function InspectionMobile() {
     submitInspectionTask,
   } = useAppStore();
 
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const deepLinkId = searchParams.get('task');
+  const isDeepLinked = deepLinkId !== null;
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [taskRemark, setTaskRemark] = useState('');
+
+  useEffect(() => {
+    if (!deepLinkId) return;
+    const t = inspectionTasks.find((x) => x.id === deepLinkId);
+    if (!t) return;
+    if (t.status === 'completed') {
+      navigate('/inspection/tasks', { replace: true });
+      return;
+    }
+    if (selectedId === null) {
+      setSelectedId(t.id);
+      setTaskRemark(t.remark ?? '');
+    }
+  }, [deepLinkId, inspectionTasks, selectedId, navigate]);
 
   const actionableTasks = useMemo(
     () =>
@@ -75,6 +95,10 @@ export default function InspectionMobile() {
   };
 
   const handleBack = () => {
+    if (isDeepLinked) {
+      navigate('/inspection/tasks');
+      return;
+    }
     setSelectedId(null);
     setTaskRemark('');
   };
@@ -102,7 +126,12 @@ export default function InspectionMobile() {
       if (!ok) return;
     }
     submitInspectionTask(selectedTask.id, currentUser.name, taskRemark || undefined);
-    handleBack();
+    if (isDeepLinked) {
+      navigate('/inspection/tasks');
+    } else {
+      setSelectedId(null);
+      setTaskRemark('');
+    }
   };
 
   return (
