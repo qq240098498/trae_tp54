@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Trash2, Package, Calculator, ChevronDown, AlertTriangle, Warehouse } from 'lucide-react';
 import { MaterialItem, MATERIAL_CATEGORIES, type MaterialCategory } from '@/types';
-import { formatCurrency } from '@/utils';
+import { formatCurrency, formatNumber } from '@/utils';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
@@ -71,7 +71,7 @@ export default function MaterialForm({
       newErrors.unitPrice = '请输入有效单价';
     }
     if (selectedInventoryItem && Number(newMaterial.quantity) > selectedInventoryItem.stock) {
-      newErrors.quantity = `库存不足，当前可用：${selectedInventoryItem.stock}${selectedInventoryItem.unit}`;
+      newErrors.quantity = `库存不足，当前可用：${formatNumber(selectedInventoryItem.stock)}${selectedInventoryItem.unit}`;
     }
 
     setErrors(newErrors);
@@ -189,7 +189,7 @@ export default function MaterialForm({
                       <div className="flex items-center justify-between mt-1.5">
                         <span
                           className={cn(
-                            'font-semibold',
+                            'font-semibold tabular-nums',
                             item.stock <= 0
                               ? 'text-red-500'
                               : isLow
@@ -197,9 +197,9 @@ export default function MaterialForm({
                               : 'text-primary-700'
                           )}
                         >
-                          {item.stock}{item.unit}
+                          {formatNumber(item.stock)}{item.unit}
                         </span>
-                        <span className="text-gray-500">{formatCurrency(item.unitPrice)}</span>
+                        <span className="text-gray-500 tabular-nums">{formatCurrency(item.unitPrice)}</span>
                       </div>
                     </button>
                   );
@@ -257,7 +257,7 @@ export default function MaterialForm({
                 数量
                 {selectedInventoryItem && (
                   <span className="text-xs text-gray-400 ml-1">
-                    (库存:{selectedInventoryItem.stock}{selectedInventoryItem.unit})
+                    (库存:{formatNumber(selectedInventoryItem.stock)}{selectedInventoryItem.unit})
                   </span>
                 )}
               </label>

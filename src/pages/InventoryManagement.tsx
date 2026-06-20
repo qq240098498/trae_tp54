@@ -24,10 +24,13 @@ import {
   type StockTransactionType,
   type InventoryItem,
 } from '@/types';
-import { formatDateTime, formatCurrency } from '@/utils';
+import { formatDateTime, formatCurrency, formatNumber } from '@/utils';
 import { cn } from '@/lib/utils';
 
 type TabType = 'inventory' | 'transactions';
+
+const MAX_STOCK_QUANTITY = 99999;
+const MAX_UNIT_PRICE = 99999.99;
 
 export default function InventoryManagement() {
   const {
@@ -139,9 +142,21 @@ export default function InventoryManagement() {
     if (!itemForm.name.trim()) errors.name = '请输入名称';
     if (!itemForm.spec.trim()) errors.spec = '请输入规格';
     if (!itemForm.unit.trim()) errors.unit = '请输入单位';
-    if (itemForm.stock < 0) errors.stock = '库存不能为负';
-    if (itemForm.safeStock < 0) errors.safeStock = '安全库存不能为负';
-    if (itemForm.unitPrice < 0) errors.unitPrice = '单价不能为负';
+    if (itemForm.stock < 0) {
+      errors.stock = '库存不能为负';
+    } else if (itemForm.stock > MAX_STOCK_QUANTITY) {
+      errors.stock = `库存不能超过 ${formatNumber(MAX_STOCK_QUANTITY)}`;
+    }
+    if (itemForm.safeStock < 0) {
+      errors.safeStock = '安全库存不能为负';
+    } else if (itemForm.safeStock > MAX_STOCK_QUANTITY) {
+      errors.safeStock = `安全库存不能超过 ${formatNumber(MAX_STOCK_QUANTITY)}`;
+    }
+    if (itemForm.unitPrice < 0) {
+      errors.unitPrice = '单价不能为负';
+    } else if (itemForm.unitPrice > MAX_UNIT_PRICE) {
+      errors.unitPrice = `单价不能超过 ${formatCurrency(MAX_UNIT_PRICE)}`;
+    }
     setItemErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -175,10 +190,16 @@ export default function InventoryManagement() {
     const qty = Number(transactionForm.quantity);
     if (!transactionForm.quantity || isNaN(qty) || qty <= 0) {
       errors.quantity = '请输入有效数量';
+    } else if (qty > MAX_STOCK_QUANTITY) {
+      errors.quantity = `数量不能超过 ${MAX_STOCK_QUANTITY.toLocaleString()}`;
     }
     if (transactionType === '入库' && transactionForm.unitPrice) {
       const price = Number(transactionForm.unitPrice);
-      if (isNaN(price) || price < 0) errors.unitPrice = '请输入有效单价';
+      if (isNaN(price) || price < 0) {
+        errors.unitPrice = '请输入有效单价';
+      } else if (price > MAX_UNIT_PRICE) {
+        errors.unitPrice = `单价不能超过 ${MAX_UNIT_PRICE.toLocaleString()} 元`;
+      }
     }
     setTransactionErrors(errors);
     return Object.keys(errors).length === 0;
@@ -262,7 +283,7 @@ export default function InventoryManagement() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-500">物品种类</p>
-                <p className="text-2xl font-bold text-gray-800 mt-1">{inventoryItems.length}</p>
+                <p className="text-2xl font-bold text-gray-800 mt-1 tabular-nums">{formatNumber(inventoryItems.length)}</p>
               </div>
               <div className="p-2.5 rounded-xl bg-primary-100">
                 <Package className="w-5 h-5 text-primary-700" />
@@ -273,7 +294,7 @@ export default function InventoryManagement() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-500">库存总量</p>
-                <p className="text-2xl font-bold text-gray-800 mt-1">{totalItems}</p>
+                <p className="text-2xl font-bold text-gray-800 mt-1 tabular-nums">{formatNumber(totalItems)}</p>
               </div>
               <div className="p-2.5 rounded-xl bg-blue-100">
                 <TrendingDown className="w-5 h-5 text-blue-700" />
@@ -284,7 +305,7 @@ export default function InventoryManagement() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-500">库存总值</p>
-                <p className="text-2xl font-bold text-gray-800 mt-1">{formatCurrency(totalValue)}</p>
+                <p className="text-2xl font-bold text-gray-800 mt-1 tabular-nums">{formatCurrency(totalValue)}</p>
               </div>
               <div className="p-2.5 rounded-xl bg-green-100">
                 <RefreshCw className="w-5 h-5 text-green-700" />
@@ -295,7 +316,7 @@ export default function InventoryManagement() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-gray-500">低库存预警</p>
-                <p className="text-2xl font-bold text-red-600 mt-1">{lowStockCount}</p>
+                <p className="text-2xl font-bold text-red-600 mt-1 tabular-nums">{formatNumber(lowStockCount)}</p>
               </div>
               <div className="p-2.5 rounded-xl bg-red-100">
                 <AlertTriangle className="w-5 h-5 text-red-700" />
@@ -326,7 +347,7 @@ export default function InventoryManagement() {
                       >
                         <span className="font-medium">{item.name}</span>
                         <span className="text-red-500">
-                          ({item.stock}/{item.safeStock}{item.unit})
+                          ({formatNumber(item.stock)}/{formatNumber(item.safeStock)}{item.unit})
                         </span>
                         <ArrowDownCircle className="w-3.5 h-3.5" />
                       </button>
@@ -478,7 +499,7 @@ export default function InventoryManagement() {
                             <td className="px-6 py-4 text-right">
                               <span
                                 className={cn(
-                                  'font-semibold',
+                                  'font-semibold tabular-nums',
                                   item.stock === 0
                                     ? 'text-red-600'
                                     : isLow
@@ -486,14 +507,14 @@ export default function InventoryManagement() {
                                     : 'text-gray-900'
                                 )}
                               >
-                                {item.stock}
+                                {formatNumber(item.stock)}
                                 <span className="text-xs text-gray-400 ml-0.5">
                                   {item.unit}
                                 </span>
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-right text-gray-600">
-                              {item.safeStock}
+                            <td className="px-6 py-4 text-right text-gray-600 tabular-nums">
+                              {formatNumber(item.safeStock)}
                               <span className="text-xs text-gray-400 ml-0.5">{item.unit}</span>
                             </td>
                             <td className="px-6 py-4 text-right">
@@ -632,25 +653,25 @@ export default function InventoryManagement() {
                           </td>
                           <td
                             className={cn(
-                              'px-6 py-4 text-right font-semibold',
+                              'px-6 py-4 text-right font-semibold tabular-nums',
                               tx.type === '入库' || tx.type === '退货'
                                 ? 'text-green-700'
                                 : 'text-red-700'
                             )}
                           >
                             {tx.type === '入库' || tx.type === '退货' ? '+' : '-'}
-                            {tx.quantity}
+                            {formatNumber(tx.quantity)}
                           </td>
-                          <td className="px-6 py-4 text-right text-gray-600">
+                          <td className="px-6 py-4 text-right text-gray-600 tabular-nums">
                             {formatCurrency(tx.unitPrice)}
                           </td>
-                          <td className="px-6 py-4 text-right font-medium text-gray-900">
+                          <td className="px-6 py-4 text-right font-medium text-gray-900 tabular-nums">
                             {formatCurrency(tx.totalPrice)}
                           </td>
-                          <td className="px-6 py-4 text-right text-sm text-gray-600">
-                            {tx.stockBefore} →{' '}
+                          <td className="px-6 py-4 text-right text-sm text-gray-600 tabular-nums">
+                            {formatNumber(tx.stockBefore)} →{' '}
                             <span className="font-semibold text-primary-700">
-                              {tx.stockAfter}
+                              {formatNumber(tx.stockAfter)}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-700">{tx.operator}</td>
@@ -791,6 +812,7 @@ export default function InventoryManagement() {
                       })
                     }
                     min="0"
+                    max={MAX_STOCK_QUANTITY}
                     className={cn(
                       'input-field',
                       itemErrors.stock && 'border-red-300 focus:ring-red-500'
@@ -814,6 +836,7 @@ export default function InventoryManagement() {
                       })
                     }
                     min="0"
+                    max={MAX_STOCK_QUANTITY}
                     className={cn(
                       'input-field',
                       itemErrors.safeStock && 'border-red-300 focus:ring-red-500'
@@ -839,6 +862,7 @@ export default function InventoryManagement() {
                       })
                     }
                     min="0"
+                    max={MAX_UNIT_PRICE}
                     step="0.01"
                     className={cn(
                       'input-field',
@@ -979,6 +1003,7 @@ export default function InventoryManagement() {
                       : '请输入数量'
                   }
                   min="0"
+                  max={MAX_STOCK_QUANTITY}
                   className={cn(
                     'input-field',
                     transactionErrors.quantity &&
@@ -1010,6 +1035,7 @@ export default function InventoryManagement() {
                     }
                     placeholder={formatCurrency(selectedTransactionItem.unitPrice)}
                     min="0"
+                    max={MAX_UNIT_PRICE}
                     step="0.01"
                     className={cn(
                       'input-field',

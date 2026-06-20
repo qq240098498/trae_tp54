@@ -301,8 +301,8 @@ export default function Dashboard() {
                       className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg border border-orange-200"
                     >
                       <span className="text-sm font-medium text-gray-800">{item.name}</span>
-                      <span className="text-xs text-orange-600 font-semibold">
-                        {item.stock}/{item.safeStock}{item.unit}
+                      <span className="text-xs text-orange-600 font-semibold tabular-nums">
+                        {item.stock.toLocaleString()}/{item.safeStock.toLocaleString()}{item.unit}
                       </span>
                     </div>
                   ))}
@@ -375,11 +375,11 @@ export default function Dashboard() {
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="p-3 rounded-lg bg-primary-50 text-center">
-                  <p className="text-2xl font-bold text-primary-800">{inventoryStats.totalTypes}</p>
+                  <p className="text-2xl font-bold text-primary-800 tabular-nums">{inventoryStats.totalTypes.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-0.5">物品种类</p>
                 </div>
                 <div className="p-3 rounded-lg bg-blue-50 text-center">
-                  <p className="text-2xl font-bold text-blue-700">{inventoryStats.totalStock}</p>
+                  <p className="text-2xl font-bold text-blue-700 tabular-nums">{inventoryStats.totalStock.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-0.5">库存总量</p>
                 </div>
               </div>
@@ -396,10 +396,10 @@ export default function Dashboard() {
                       <div key={item.id} className="flex items-center justify-between text-xs">
                         <span className="text-gray-700 truncate flex-1">{item.name}</span>
                         <span className={cn(
-                          'font-semibold ml-2 shrink-0',
+                          'font-semibold ml-2 shrink-0 tabular-nums',
                           item.stock <= 0 ? 'text-red-600' : 'text-orange-600'
                         )}>
-                          {item.stock}/{item.safeStock}{item.unit}
+                          {item.stock.toLocaleString()}/{item.safeStock.toLocaleString()}{item.unit}
                         </span>
                       </div>
                     ))}

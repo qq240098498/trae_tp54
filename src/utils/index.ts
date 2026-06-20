@@ -109,7 +109,11 @@ export function escalateUrgency(urgency: UrgencyLevel): UrgencyLevel {
 }
 
 export function formatCurrency(amount: number): string {
-  return `¥${amount.toFixed(2)}`;
+  return `¥${amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export function formatNumber(num: number): string {
+  return num.toLocaleString('zh-CN');
 }
 
 export function generateInspectionTaskNo(): string {
